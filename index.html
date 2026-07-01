@@ -6,7 +6,7 @@
   <title>IronLog — Workout Tracker</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; background: #14161A; }
+    body { margin: 0; background: #14161A; overflow-x: hidden; }
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
@@ -513,7 +513,7 @@ function IronLog() {
 
               <label style={S.label}>
                 Date
-                <input style={{...S.input, maxWidth:'100%', boxSizing:'border-box'}} type="date" value={form.date} max={todayISO()}
+                <input style={{...S.input, width:'100%', minWidth:0, WebkitAppearance:'none', appearance:'none'}} type="date" value={form.date} max={todayISO()}
                   onChange={e => setForm(f => ({...f, date:e.target.value}))}/>
               </label>
               <label style={S.label}>
@@ -859,7 +859,7 @@ function CalendarFrequencyView({ workouts, uniqueVisitDates, calendarMonth, setC
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
-  page:            { minHeight:'100vh', background:'#14161A', color:'#EDEAE2', fontFamily:"'Inter',sans-serif", paddingBottom:100, maxWidth:480, margin:'0 auto', position:'relative' },
+  page:            { minHeight:'100vh', background:'#14161A', color:'#EDEAE2', fontFamily:"'Inter',sans-serif", paddingBottom:100, maxWidth:480, margin:'0 auto', position:'relative', overflowX:'hidden' },
   loadingWrap:     { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh' },
   header:          { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'20px 18px 14px' },
   headerLeft:      { display:'flex', alignItems:'center', gap:12 },
@@ -925,7 +925,7 @@ const S = {
   trendBannerText: { fontSize:12.5, color:'#C7CAD1', lineHeight:1.5 },
   fab:             { position:'fixed', bottom:28, right:24, width:54, height:54, borderRadius:'50%', background:'#E8472B', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 4px 16px rgba(232,71,43,0.4)' },
   modalOverlay:    { position:'fixed', inset:0, background:'rgba(10,11,13,0.7)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:50 },
-  modal:           { background:'#1A1C20', borderTop:'1px solid #2C3036', borderRadius:'18px 18px 0 0', width:'100%', maxWidth:480, padding:'18px 20px 28px', maxHeight:'88vh', overflowY:'auto' },
+  modal:           { background:'#1A1C20', borderTop:'1px solid #2C3036', borderRadius:'18px 18px 0 0', width:'100%', maxWidth:480, padding:'18px 20px 28px', maxHeight:'88vh', overflowY:'auto', overflowX:'hidden' },
   modalHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 },
   modalTitle:      { fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, margin:0 },
   typeToggleRow:   { display:'flex', gap:8, marginBottom:16 },
