@@ -71,7 +71,10 @@ const SETTINGS_KEY = 'ironlog-settings';
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
 const uid      = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
 
 function formatDate(iso) {
   const d = new Date(iso + 'T00:00:00');
@@ -516,7 +519,7 @@ function IronLog() {
 
               <label style={S.label}>
                 Date
-                <input style={S.input} type="date" value={form.date} max={todayISO()}
+                <input style={{...S.input, maxWidth:'100%', boxSizing:'border-box'}} type="date" value={form.date} max={todayISO()}
                   onChange={e => setForm(f => ({...f, date:e.target.value}))}/>
               </label>
               <label style={S.label}>
