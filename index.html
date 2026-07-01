@@ -1,715 +1,531 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot, Cell } from 'recharts';
-import { Plus, Dumbbell, Footprints, TrendingUp, TrendingDown, Minus, Flame, Trash2, ChevronRight, ChevronLeft, X, Calendar, CalendarDays, Award, ListChecks } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>IronLog — Workout Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #14161A; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    input, textarea, button { -webkit-tap-highlight-color: transparent; }
+    input:focus, textarea:focus { border-color: #E8472B !important; outline: none; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-const STORAGE_KEY = 'ironlog-workouts';
+  <!-- React -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Recharts (needs PropTypes) -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+  <!-- Babel standalone for JSX transform -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+// ─── Inline SVG icons (no external dependency) ───────────────────────────────
+function Icon({ size=24, color='currentColor', strokeWidth=2, style, children, ...rest }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+      strokeLinejoin="round" style={style} {...rest}>
+      {children}
+    </svg>
+  );
+}
+const Plus         = p => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const Dumbbell     = p => <Icon {...p}><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829 2 2 0 1 1 2.828 2.829l1.767-1.768a2 2 0 1 1 2.829 2.829z"/></Icon>;
+const Footprints   = p => <Icon {...p}><path d="M4 16v-2.5C4 10 6 8 9.5 8"/><path d="M12.5 8C16 8 18 10 18 13.5v.5"/><path d="M4.5 20.5c.5.5 1 .5 1.5 0l1-1c.5-.5.5-1 0-1.5l-2-2c-.5-.5-1-.5-1.5 0l-1 1c-.5.5-.5 1 0 1.5z"/><path d="M18.5 20.5c.5.5 1 .5 1.5 0l1-1c.5-.5.5-1 0-1.5l-2-2c-.5-.5-1-.5-1.5 0l-1 1c-.5.5-.5 1 0 1.5z"/></Icon>;
+const TrendingUp   = p => <Icon {...p}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></Icon>;
+const TrendingDown = p => <Icon {...p}><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></Icon>;
+const Minus        = p => <Icon {...p}><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+const Flame        = p => <Icon {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></Icon>;
+const Trash2       = p => <Icon {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>;
+const ChevronRight = p => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>;
+const ChevronLeft  = p => <Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>;
+const X            = p => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>;
+const Calendar     = p => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Icon>;
+const CalendarDays = p => <Icon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></Icon>;
+const Award        = p => <Icon {...p}><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></Icon>;
+const ListChecks   = p => <Icon {...p}><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><line x1="11" y1="8" x2="21" y2="8"/><line x1="11" y1="18" x2="21" y2="18"/></Icon>;
+
+// ─── Recharts components ──────────────────────────────────────────────────────
+const {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Dot, Cell,
+} = Recharts;
+
+// ─── React hooks ─────────────────────────────────────────────────────────────
+const { useState, useEffect, useMemo, useCallback } = React;
+
+// ─── Storage (localStorage) ───────────────────────────────────────────────────
+const STORAGE_KEY  = 'ironlog-workouts';
 const SETTINGS_KEY = 'ironlog-settings';
 
-const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
+// ─── Utility helpers ──────────────────────────────────────────────────────────
+const uid      = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 function formatDate(iso) {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-
 function formatDateShort(iso) {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 }
-
-function parseISO(iso) {
-  return new Date(iso + 'T00:00:00');
-}
-
+function parseISO(iso) { return new Date(iso + 'T00:00:00'); }
 function toISO(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
 function startOfWeek(d) {
-  const day = d.getDay(); // 0 = Sun
-  const diff = day === 0 ? -6 : 1 - day; // week starts Monday
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
   const res = new Date(d);
   res.setDate(d.getDate() + diff);
-  res.setHours(0, 0, 0, 0);
+  res.setHours(0,0,0,0);
   return res;
 }
+function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth()+n, 1); }
 
-function startOfMonth(d) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
-function addDays(d, n) {
-  const res = new Date(d);
-  res.setDate(res.getDate() + n);
-  return res;
-}
-
-function addMonths(d, n) {
-  return new Date(d.getFullYear(), d.getMonth() + n, 1);
-}
-
-// Build chronological buckets (week/month/year) between the first and last visit,
-// zero-filled so gaps show up as dips rather than being skipped.
 function buildVisitBuckets(uniqueDates, granularity) {
   if (uniqueDates.length === 0) return [];
   const sorted = [...uniqueDates].sort();
   const first = parseISO(sorted[0]);
-  const last = parseISO(sorted[sorted.length - 1]);
+  const last  = parseISO(sorted[sorted.length-1]);
   const counts = new Map();
-  sorted.forEach((iso) => {
-    let key;
+  sorted.forEach(iso => {
     const d = parseISO(iso);
-    if (granularity === 'week') key = toISO(startOfWeek(d));
-    else if (granularity === 'month') key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    else key = `${d.getFullYear()}`;
-    counts.set(key, (counts.get(key) || 0) + 1);
+    let key;
+    if (granularity === 'week')       key = toISO(startOfWeek(d));
+    else if (granularity === 'month') key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    else                              key = `${d.getFullYear()}`;
+    counts.set(key, (counts.get(key)||0) + 1);
   });
-
   const buckets = [];
   if (granularity === 'week') {
-    let cursor = startOfWeek(first);
-    const end = startOfWeek(last);
-    while (cursor <= end) {
-      const key = toISO(cursor);
-      buckets.push({ key, label: formatDateShort(key), count: counts.get(key) || 0 });
-      cursor = addDays(cursor, 7);
+    let cur = startOfWeek(first), end = startOfWeek(last);
+    while (cur <= end) {
+      const key = toISO(cur);
+      buckets.push({ key, label: formatDateShort(key), count: counts.get(key)||0 });
+      cur = addDays(cur, 7);
     }
   } else if (granularity === 'month') {
-    let cursor = startOfMonth(first);
-    const end = startOfMonth(last);
-    while (cursor <= end) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-      const label = cursor.toLocaleDateString('en-AU', { month: 'short', year: '2-digit' });
-      buckets.push({ key, label, count: counts.get(key) || 0 });
-      cursor = addMonths(cursor, 1);
+    let cur = startOfMonth(first), end = startOfMonth(last);
+    while (cur <= end) {
+      const key = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+      const label = cur.toLocaleDateString('en-AU', { month:'short', year:'2-digit' });
+      buckets.push({ key, label, count: counts.get(key)||0 });
+      cur = addMonths(cur, 1);
     }
   } else {
-    let y = first.getFullYear();
-    const endY = last.getFullYear();
+    let y = first.getFullYear(), endY = last.getFullYear();
     while (y <= endY) {
-      buckets.push({ key: `${y}`, label: `${y}`, count: counts.get(`${y}`) || 0 });
-      y += 1;
+      buckets.push({ key:`${y}`, label:`${y}`, count: counts.get(`${y}`)||0 });
+      y++;
     }
   }
   return buckets;
 }
 
-// Simple linear regression slope to describe the trend direction across buckets.
 function trendSlope(buckets) {
   const n = buckets.length;
   if (n < 2) return 0;
-  const xs = buckets.map((_, i) => i);
-  const ys = buckets.map((b) => b.count);
-  const xMean = xs.reduce((a, b) => a + b, 0) / n;
-  const yMean = ys.reduce((a, b) => a + b, 0) / n;
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < n; i++) {
-    num += (xs[i] - xMean) * (ys[i] - yMean);
-    den += (xs[i] - xMean) ** 2;
-  }
-  return den === 0 ? 0 : num / den;
+  const xs = buckets.map((_,i) => i);
+  const ys = buckets.map(b => b.count);
+  const xM = xs.reduce((a,b)=>a+b,0)/n;
+  const yM = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0;
+  for (let i=0;i<n;i++) { num+=(xs[i]-xM)*(ys[i]-yM); den+=(xs[i]-xM)**2; }
+  return den===0 ? 0 : num/den;
 }
 
-// --- Run-specific helpers: duration in seconds, pace in seconds-per-unit ---
 function formatDuration(totalSeconds) {
   if (totalSeconds == null || isNaN(totalSeconds)) return '—';
   const s = Math.round(totalSeconds);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  return `${m}:${String(sec).padStart(2, '0')}`;
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${m}:${String(sec).padStart(2,'0')}`;
 }
-
 function paceSecondsPerUnit(distance, durationSeconds) {
   if (!distance || distance <= 0) return null;
   return durationSeconds / distance;
 }
-
 function formatPace(secPerUnit, distanceUnit) {
   if (secPerUnit == null || isNaN(secPerUnit) || !isFinite(secPerUnit)) return '—';
   return `${formatDuration(secPerUnit)}/${distanceUnit}`;
 }
+function activityKey(type, name) { return `${type}::${name}`; }
 
-function activityKey(type, name) {
-  return `${type}::${name}`;
-}
-
-
-export default function IronLog() {
-  const [workouts, setWorkouts] = useState([]);
-  const [unit, setUnit] = useState('kg');
-  const [distanceUnit, setDistanceUnit] = useState('km');
-  const [loaded, setLoaded] = useState(false);
-  const [view, setView] = useState('log'); // 'log' | 'progress' | 'calendar'
-  const [selectedActivity, setSelectedActivity] = useState(null); // { type, name }
-  const [showForm, setShowForm] = useState(false);
-  const [toast, setToast] = useState(null);
+// ─── Main App ─────────────────────────────────────────────────────────────────
+function IronLog() {
+  const [workouts, setWorkouts]           = useState([]);
+  const [unit, setUnit]                   = useState('kg');
+  const [distanceUnit, setDistanceUnit]   = useState('km');
+  const [loaded, setLoaded]               = useState(false);
+  const [view, setView]                   = useState('log');
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [showForm, setShowForm]           = useState(false);
+  const [toast, setToast]                 = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
-  const [granularity, setGranularity] = useState('week'); // 'week' | 'month' | 'year'
-  const [selectedDay, setSelectedDay] = useState(null);
+  const [granularity, setGranularity]     = useState('week');
+  const [selectedDay, setSelectedDay]     = useState(null);
 
   const emptyForm = {
-    type: 'strength', // 'strength' | 'run'
-    exercise: '',
-    weight: '',
-    reps: '',
-    sets: '',
-    distance: '',
-    durationMin: '',
-    durationSec: '',
-    route: '',
-    date: todayISO(),
-    notes: '',
+    type: 'strength', exercise: '', weight: '', reps: '', sets: '',
+    distance: '', durationMin: '', durationSec: '', route: '',
+    date: todayISO(), notes: '',
   };
   const [form, setForm] = useState(emptyForm);
 
-  // Load from persistent storage
+  // Load from localStorage
   useEffect(() => {
-    (async () => {
-      try {
-        const w = await window.storage.get(STORAGE_KEY, false);
-        if (w && w.value) setWorkouts(JSON.parse(w.value));
-      } catch (e) {
-        // no data yet
+    try {
+      const w = localStorage.getItem(STORAGE_KEY);
+      if (w) setWorkouts(JSON.parse(w));
+    } catch(e) {}
+    try {
+      const s = localStorage.getItem(SETTINGS_KEY);
+      if (s) {
+        const p = JSON.parse(s);
+        if (p.unit) setUnit(p.unit);
+        if (p.distanceUnit) setDistanceUnit(p.distanceUnit);
       }
-      try {
-        const s = await window.storage.get(SETTINGS_KEY, false);
-        if (s && s.value) {
-          const parsed = JSON.parse(s.value);
-          if (parsed.unit) setUnit(parsed.unit);
-          if (parsed.distanceUnit) setDistanceUnit(parsed.distanceUnit);
-        }
-      } catch (e) {
-        // no settings yet
-      }
-      setLoaded(true);
-    })();
+    } catch(e) {}
+    setLoaded(true);
   }, []);
 
-  const persistWorkouts = useCallback(async (next) => {
+  const persistWorkouts = useCallback((next) => {
     setWorkouts(next);
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(next), false);
-    } catch (e) {
-      console.error('Failed to save workouts', e);
-    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch(e) {}
   }, []);
 
-  const persistSettings = useCallback(async (nextUnit, nextDistanceUnit) => {
+  const persistSettings = useCallback((nextUnit, nextDistUnit) => {
     setUnit(nextUnit);
-    setDistanceUnit(nextDistanceUnit);
-    try {
-      await window.storage.set(SETTINGS_KEY, JSON.stringify({ unit: nextUnit, distanceUnit: nextDistanceUnit }), false);
-    } catch (e) {
-      console.error('Failed to save settings', e);
-    }
+    setDistanceUnit(nextDistUnit);
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ unit: nextUnit, distanceUnit: nextDistUnit })); } catch(e) {}
   }, []);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
 
   const strengthNames = useMemo(() => {
-    const set = new Set(workouts.filter((w) => w.type !== 'run').map((w) => w.exercise));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    const set = new Set(workouts.filter(w => w.type !== 'run').map(w => w.exercise));
+    return Array.from(set).sort((a,b) => a.localeCompare(b));
   }, [workouts]);
 
-  // Every distinct (type, name) combo, for the Progress tab chip list
   const activities = useMemo(() => {
     const map = new Map();
-    workouts.forEach((w) => {
+    workouts.forEach(w => {
       const type = w.type || 'strength';
       const key = activityKey(type, w.exercise);
       if (!map.has(key)) map.set(key, { type, name: w.exercise });
     });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(map.values()).sort((a,b) => a.name.localeCompare(b.name));
   }, [workouts]);
 
   const sortedWorkouts = useMemo(
-    () => [...workouts].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt)),
+    () => [...workouts].sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt),
     [workouts]
   );
 
-  // PR = heaviest weight lifted (strength) or fastest pace achieved (run), as of that entry's date
-  const isPR = useCallback(
-    (entry) => {
-      const type = entry.type || 'strength';
-      const prior = workouts.filter(
-        (w) => (w.type || 'strength') === type && w.exercise === entry.exercise && w.date <= entry.date && w.id !== entry.id
-      );
-      if (type === 'run') {
-        const entryPace = paceSecondsPerUnit(entry.distance, entry.durationSeconds);
-        if (entryPace == null) return false;
-        const priorPaces = prior.map((w) => paceSecondsPerUnit(w.distance, w.durationSeconds)).filter((p) => p != null);
-        const priorBest = priorPaces.length ? Math.min(...priorPaces) : Infinity;
-        return entryPace < priorBest;
-      }
-      const priorMax = prior.reduce((m, w) => Math.max(m, w.weight), 0);
-      return entry.weight > priorMax;
-    },
-    [workouts]
-  );
+  const isPR = useCallback((entry) => {
+    const type = entry.type || 'strength';
+    const prior = workouts.filter(w =>
+      (w.type||'strength') === type && w.exercise === entry.exercise &&
+      w.date <= entry.date && w.id !== entry.id
+    );
+    if (type === 'run') {
+      const ep = paceSecondsPerUnit(entry.distance, entry.durationSeconds);
+      if (ep == null) return false;
+      const best = Math.min(...prior.map(w => paceSecondsPerUnit(w.distance, w.durationSeconds)).filter(p => p != null), Infinity);
+      return ep < best;
+    }
+    const priorMax = prior.reduce((m,w) => Math.max(m,w.weight), 0);
+    return entry.weight > priorMax;
+  }, [workouts]);
 
-  function resetForm() {
-    setForm((f) => ({ ...emptyForm, type: f.type }));
-  }
+  function resetForm() { setForm(f => ({ ...emptyForm, type: f.type })); }
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
     if (form.type === 'run') {
       if (!form.distance || (!form.durationMin && !form.durationSec)) return;
     } else {
       if (!form.exercise.trim() || !form.weight) return;
     }
-
-    const durationSeconds =
-      form.type === 'run' ? (parseInt(form.durationMin || '0', 10) * 60) + parseInt(form.durationSec || '0', 10) : null;
-
+    const durationSeconds = form.type === 'run'
+      ? parseInt(form.durationMin||'0',10)*60 + parseInt(form.durationSec||'0',10)
+      : null;
     const route = form.route.trim();
-    const feelNotes = form.notes.trim();
-    const combinedNotes =
-      form.type === 'run'
-        ? [route ? `Route: ${route}` : null, feelNotes || null].filter(Boolean).join(' — ')
-        : feelNotes;
-
+    const combinedNotes = form.type === 'run'
+      ? [route ? `Route: ${route}` : null, form.notes.trim()||null].filter(Boolean).join(' — ')
+      : form.notes.trim();
     const entry = {
-      id: uid(),
-      type: form.type,
+      id: uid(), type: form.type,
       exercise: form.type === 'run' ? 'Run' : form.exercise.trim(),
-      date: form.date,
-      notes: combinedNotes,
-      createdAt: Date.now(),
+      date: form.date, notes: combinedNotes, createdAt: Date.now(),
       weight: form.type === 'strength' ? parseFloat(form.weight) : null,
-      reps: form.type === 'strength' && form.reps ? parseInt(form.reps, 10) : null,
-      sets: form.type === 'strength' && form.sets ? parseInt(form.sets, 10) : null,
+      reps: form.type === 'strength' && form.reps ? parseInt(form.reps,10) : null,
+      sets: form.type === 'strength' && form.sets ? parseInt(form.sets,10) : null,
       distance: form.type === 'run' ? parseFloat(form.distance) : null,
-      durationSeconds: form.type === 'run' ? durationSeconds : null,
+      durationSeconds,
     };
     const next = [...workouts, entry];
-    await persistWorkouts(next);
-
-    const priorSame = workouts.filter((w) => (w.type || 'strength') === entry.type && w.exercise === entry.exercise);
-
+    persistWorkouts(next);
+    const priorSame = workouts.filter(w => (w.type||'strength') === entry.type && w.exercise === entry.exercise);
     if (entry.type === 'run') {
-      const entryPace = paceSecondsPerUnit(entry.distance, entry.durationSeconds);
-      const priorPaces = priorSame.map((w) => paceSecondsPerUnit(w.distance, w.durationSeconds)).filter((p) => p != null);
-      const priorBest = priorPaces.length ? Math.min(...priorPaces) : null;
-      const label = route || 'Run';
-      if (entryPace != null && priorBest != null && entryPace < priorBest) {
-        showToast(`New best pace — ${label} at ${formatPace(entryPace, distanceUnit)}`);
-      } else {
-        showToast('Run logged');
-      }
+      const ep = paceSecondsPerUnit(entry.distance, entry.durationSeconds);
+      const best = Math.min(...priorSame.map(w => paceSecondsPerUnit(w.distance,w.durationSeconds)).filter(p=>p!=null), Infinity);
+      if (ep != null && isFinite(best) && ep < best) {
+        showToast(`New best pace — ${route||'Run'} at ${formatPace(ep, distanceUnit)}`);
+      } else { showToast('Run logged'); }
     } else {
-      const priorMax = priorSame.reduce((m, w) => Math.max(m, w.weight), 0);
+      const priorMax = priorSame.reduce((m,w) => Math.max(m,w.weight), 0);
       if (entry.weight > priorMax && priorMax > 0) {
         showToast(`New PR — ${entry.exercise} at ${entry.weight}${unit}`);
-      } else {
-        showToast('Workout logged');
-      }
+      } else { showToast('Workout logged'); }
     }
     resetForm();
     setShowForm(false);
   }
 
-  async function handleDelete(id) {
-    const next = workouts.filter((w) => w.id !== id);
-    await persistWorkouts(next);
-  }
+  function handleDelete(id) { persistWorkouts(workouts.filter(w => w.id !== id)); }
 
   function openProgress(type, name) {
-    setSelectedActivity({ type: type || 'strength', name });
+    setSelectedActivity({ type: type||'strength', name });
     setView('progress');
   }
 
-  // Stats for the selected activity (strength exercise or run route)
   const activityStats = useMemo(() => {
     if (!selectedActivity) return null;
     const { type, name } = selectedActivity;
     const entries = workouts
-      .filter((w) => (w.type || 'strength') === type && w.exercise === name)
-      .sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : a.createdAt - b.createdAt));
-    if (entries.length === 0) return null;
-
+      .filter(w => (w.type||'strength') === type && w.exercise === name)
+      .sort((a,b) => a.date > b.date ? 1 : a.date < b.date ? -1 : a.createdAt - b.createdAt);
+    if (!entries.length) return null;
     if (type === 'run') {
-      const withPace = entries.map((e) => ({ ...e, pace: paceSecondsPerUnit(e.distance, e.durationSeconds) }));
-      const paced = withPace.filter((e) => e.pace != null);
-      const bestEntry = paced.length ? paced.reduce((m, e) => (e.pace < m.pace ? e : m), paced[0]) : entries[0];
-      const longestEntry = entries.reduce((m, e) => (e.distance > m.distance ? e : m), entries[0]);
-      const last = withPace[withPace.length - 1];
-      const prev = withPace.length > 1 ? withPace[withPace.length - 2] : null;
+      const withPace = entries.map(e => ({ ...e, pace: paceSecondsPerUnit(e.distance, e.durationSeconds) }));
+      const paced = withPace.filter(e => e.pace != null);
+      const bestEntry = paced.length ? paced.reduce((m,e) => e.pace < m.pace ? e : m, paced[0]) : entries[0];
+      const longestEntry = entries.reduce((m,e) => e.distance > m.distance ? e : m, entries[0]);
+      const last = withPace[withPace.length-1];
+      const prev = withPace.length > 1 ? withPace[withPace.length-2] : null;
       const paceTrend = prev && last.pace != null && prev.pace != null ? last.pace - prev.pace : 0;
-      const chartData = withPace.map((e) => ({
-        date: e.date,
-        label: formatDateShort(e.date),
-        pace: e.pace,
-        distance: e.distance,
+      const chartData = withPace.map(e => ({
+        date: e.date, label: formatDateShort(e.date),
+        pace: e.pace, distance: e.distance,
         isBest: paced.length ? e.pace <= bestEntry.pace : false,
       }));
-      return {
-        type,
-        entries: [...entries].reverse(),
-        count: entries.length,
-        best: bestEntry,
-        longest: longestEntry,
-        last,
-        paceTrend,
-        chartData,
-      };
+      return { type, entries: [...entries].reverse(), count: entries.length, best: bestEntry, longest: longestEntry, last, paceTrend, chartData };
     }
-
-    const maxEntry = entries.reduce((m, e) => (e.weight > m.weight ? e : m), entries[0]);
-    const last = entries[entries.length - 1];
-    const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+    const maxEntry = entries.reduce((m,e) => e.weight > m.weight ? e : m, entries[0]);
+    const last = entries[entries.length-1];
+    const prev = entries.length > 1 ? entries[entries.length-2] : null;
     const trend = prev ? last.weight - prev.weight : 0;
-    const chartData = entries.map((e) => ({
-      date: e.date,
-      label: formatDateShort(e.date),
-      weight: e.weight,
-      isPR: e.weight >= maxEntry.weight,
+    const chartData = entries.map(e => ({
+      date: e.date, label: formatDateShort(e.date), weight: e.weight, isPR: e.weight >= maxEntry.weight,
     }));
     return { type, entries: [...entries].reverse(), count: entries.length, max: maxEntry, last, trend, chartData };
   }, [selectedActivity, workouts]);
 
-  // Dashboard stats
   const weekCount = useMemo(() => {
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 86400000);
-    return workouts.filter((w) => new Date(w.date + 'T00:00:00') >= weekAgo).length;
+    const weekAgo = new Date(Date.now() - 7*86400000);
+    return workouts.filter(w => new Date(w.date+'T00:00:00') >= weekAgo).length;
   }, [workouts]);
 
-  const uniqueVisitDates = useMemo(() => Array.from(new Set(workouts.map((w) => w.date))).sort(), [workouts]);
+  const uniqueVisitDates = useMemo(() => Array.from(new Set(workouts.map(w => w.date))).sort(), [workouts]);
+  const todaysWorkouts   = sortedWorkouts.filter(w => w.date === todayISO());
 
-  const todaysWorkouts = sortedWorkouts.filter((w) => w.date === todayISO());
-
-  if (!loaded) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.loadingWrap}>
-          <Dumbbell size={28} color="#E8472B" />
-          <span style={{ fontFamily: 'Inter, sans-serif', color: '#8A9099', marginTop: 10 }}>Loading log…</span>
-        </div>
+  if (!loaded) return (
+    <div style={S.page}>
+      <div style={S.loadingWrap}>
+        <Dumbbell size={28} color="#E8472B" />
+        <span style={{ fontFamily:'Inter,sans-serif', color:'#8A9099', marginTop:10 }}>Loading…</span>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div style={styles.page}>
-      <style>{fontImports}</style>
-
+    <div style={S.page}>
       {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.barIcon}>
-            <div style={styles.plate} />
-            <div style={styles.bar} />
-            <div style={styles.plate} />
+      <header style={S.header}>
+        <div style={S.headerLeft}>
+          <div style={S.barIcon}>
+            <div style={S.plate}/><div style={S.bar}/><div style={S.plate}/>
           </div>
           <div>
-            <h1 style={styles.title}>IRONLOG</h1>
-            <p style={styles.subtitle}>workout tracker</p>
+            <h1 style={S.title}>IRONLOG</h1>
+            <p style={S.subtitle}>workout tracker</p>
           </div>
         </div>
-        <div style={styles.unitToggleGroup}>
-          <button
-            style={styles.unitToggle}
-            onClick={() => persistSettings(unit === 'kg' ? 'lb' : 'kg', distanceUnit)}
-            aria-label="Toggle weight unit"
-          >
-            {unit}
-          </button>
-          <button
-            style={styles.unitToggle}
-            onClick={() => persistSettings(unit, distanceUnit === 'km' ? 'mi' : 'km')}
-            aria-label="Toggle distance unit"
-          >
-            {distanceUnit}
-          </button>
+        <div style={S.unitToggleGroup}>
+          <button style={S.unitToggle} onClick={() => persistSettings(unit==='kg'?'lb':'kg', distanceUnit)}>{unit}</button>
+          <button style={S.unitToggle} onClick={() => persistSettings(unit, distanceUnit==='km'?'mi':'km')}>{distanceUnit}</button>
         </div>
       </header>
 
       {/* Tabs */}
-      <nav style={styles.tabs}>
-        <button
-          style={{ ...styles.tab, ...(view === 'log' ? styles.tabActive : {}) }}
-          onClick={() => setView('log')}
-        >
-          <ListChecks size={15} style={{ marginRight: 6 }} />
-          Log
+      <nav style={S.tabs}>
+        <button style={{...S.tab,...(view==='log'?S.tabActive:{})}} onClick={() => setView('log')}>
+          <ListChecks size={15} style={{marginRight:6}}/> Log
         </button>
-        <button
-          style={{ ...styles.tab, ...(view === 'progress' ? styles.tabActive : {}) }}
-          onClick={() => {
-            if (!selectedActivity && activities.length) setSelectedActivity(activities[0]);
-            setView('progress');
-          }}
-        >
-          <TrendingUp size={15} style={{ marginRight: 6 }} />
-          Progress
+        <button style={{...S.tab,...(view==='progress'?S.tabActive:{})}} onClick={() => {
+          if (!selectedActivity && activities.length) setSelectedActivity(activities[0]);
+          setView('progress');
+        }}>
+          <TrendingUp size={15} style={{marginRight:6}}/> Progress
         </button>
-        <button
-          style={{ ...styles.tab, ...(view === 'calendar' ? styles.tabActive : {}) }}
-          onClick={() => setView('calendar')}
-        >
-          <CalendarDays size={15} style={{ marginRight: 6 }} />
-          Calendar
+        <button style={{...S.tab,...(view==='calendar'?S.tabActive:{})}} onClick={() => setView('calendar')}>
+          <CalendarDays size={15} style={{marginRight:6}}/> Calendar
         </button>
       </nav>
 
-      <main style={styles.main}>
-        {view === 'log' && (
-          <>
-            {/* Quick stats */}
-            <div style={styles.statRow}>
-              <div style={styles.statCard}>
-                <div style={styles.statNum}>{workouts.length}</div>
-                <div style={styles.statLabel}>Total logged</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statNum}>{weekCount}</div>
-                <div style={styles.statLabel}>This week</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statNum}>{activities.length}</div>
-                <div style={styles.statLabel}>Activities</div>
-              </div>
+      <main style={S.main}>
+        {view === 'log' && <>
+          <div style={S.statRow}>
+            <div style={S.statCard}><div style={S.statNum}>{workouts.length}</div><div style={S.statLabel}>Total logged</div></div>
+            <div style={S.statCard}><div style={S.statNum}>{weekCount}</div><div style={S.statLabel}>This week</div></div>
+            <div style={S.statCard}><div style={S.statNum}>{activities.length}</div><div style={S.statLabel}>Activities</div></div>
+          </div>
+          {todaysWorkouts.length > 0 && (
+            <div style={S.sectionBlock}>
+              <div style={S.sectionHeading}><Calendar size={14} color="#E8472B"/><span>TODAY</span></div>
+              {todaysWorkouts.map(w => <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={isPR(w)} onDelete={handleDelete} onView={openProgress}/>)}
             </div>
-
-            {todaysWorkouts.length > 0 && (
-              <div style={styles.sectionBlock}>
-                <div style={styles.sectionHeading}>
-                  <Calendar size={14} color="#E8472B" />
-                  <span>TODAY</span>
-                </div>
-                {todaysWorkouts.map((w) => (
-                  <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={isPR(w)} onDelete={handleDelete} onView={openProgress} />
-                ))}
-              </div>
-            )}
-
-            <div style={styles.sectionBlock}>
-              <div style={styles.sectionHeading}>
-                <span>HISTORY</span>
-              </div>
-              {sortedWorkouts.filter((w) => w.date !== todayISO()).length === 0 && todaysWorkouts.length === 0 ? (
-                <EmptyState onAdd={() => setShowForm(true)} />
-              ) : (
-                sortedWorkouts
-                  .filter((w) => w.date !== todayISO())
-                  .map((w) => (
-                    <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={isPR(w)} onDelete={handleDelete} onView={openProgress} />
-                  ))
-              )}
-            </div>
-          </>
-        )}
+          )}
+          <div style={S.sectionBlock}>
+            <div style={S.sectionHeading}><span>HISTORY</span></div>
+            {sortedWorkouts.filter(w => w.date !== todayISO()).length === 0 && todaysWorkouts.length === 0
+              ? <EmptyState onAdd={() => setShowForm(true)}/>
+              : sortedWorkouts.filter(w => w.date !== todayISO()).map(w =>
+                  <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={isPR(w)} onDelete={handleDelete} onView={openProgress}/>
+                )
+            }
+          </div>
+        </>}
 
         {view === 'progress' && (
-          <ProgressView
-            activities={activities}
-            selectedActivity={selectedActivity}
-            setSelectedActivity={setSelectedActivity}
-            stats={activityStats}
-            unit={unit}
-            distanceUnit={distanceUnit}
-            onDelete={handleDelete}
-          />
+          <ProgressView activities={activities} selectedActivity={selectedActivity} setSelectedActivity={setSelectedActivity}
+            stats={activityStats} unit={unit} distanceUnit={distanceUnit} onDelete={handleDelete}/>
         )}
 
         {view === 'calendar' && (
-          <CalendarFrequencyView
-            workouts={workouts}
-            uniqueVisitDates={uniqueVisitDates}
-            calendarMonth={calendarMonth}
-            setCalendarMonth={setCalendarMonth}
-            granularity={granularity}
-            setGranularity={setGranularity}
-            selectedDay={selectedDay}
-            setSelectedDay={setSelectedDay}
-            unit={unit}
-            distanceUnit={distanceUnit}
-            onDelete={handleDelete}
-          />
+          <CalendarFrequencyView workouts={workouts} uniqueVisitDates={uniqueVisitDates}
+            calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth}
+            granularity={granularity} setGranularity={setGranularity}
+            selectedDay={selectedDay} setSelectedDay={setSelectedDay}
+            unit={unit} distanceUnit={distanceUnit} onDelete={handleDelete}/>
         )}
       </main>
 
       {/* FAB */}
-      <button style={styles.fab} onClick={() => setShowForm(true)} aria-label="Log workout">
-        <Plus size={24} color="#14161A" strokeWidth={2.5} />
+      <button style={S.fab} onClick={() => setShowForm(true)} aria-label="Log workout">
+        <Plus size={24} color="#14161A" strokeWidth={2.5}/>
       </button>
 
-      {/* Form modal */}
+      {/* Log form modal */}
       {showForm && (
-        <div style={styles.modalOverlay} onClick={() => setShowForm(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Log workout</h2>
-              <button style={styles.iconBtn} onClick={() => setShowForm(false)}>
-                <X size={18} color="#8A9099" />
+        <div style={S.modalOverlay} onClick={() => setShowForm(false)}>
+          <div style={S.modal} onClick={e => e.stopPropagation()}>
+            <div style={S.modalHeader}>
+              <h2 style={S.modalTitle}>Log workout</h2>
+              <button style={S.iconBtn} onClick={() => setShowForm(false)}><X size={18} color="#8A9099"/></button>
+            </div>
+
+            <div style={S.typeToggleRow}>
+              <button type="button"
+                style={{...S.typeToggleBtn,...(form.type==='strength'?S.typeToggleBtnActive:{})}}
+                onClick={() => setForm(f => ({...f, type:'strength'}))}>
+                <Dumbbell size={14} style={{marginRight:6}}/> Strength
+              </button>
+              <button type="button"
+                style={{...S.typeToggleBtn,...(form.type==='run'?S.typeToggleBtnActive:{})}}
+                onClick={() => setForm(f => ({...f, type:'run'}))}>
+                <Footprints size={14} style={{marginRight:6}}/> Run
               </button>
             </div>
 
-            <div style={styles.typeToggleRow}>
-              <button
-                type="button"
-                style={{ ...styles.typeToggleBtn, ...(form.type === 'strength' ? styles.typeToggleBtnActive : {}) }}
-                onClick={() => setForm((f) => ({ ...f, type: 'strength' }))}
-              >
-                <Dumbbell size={14} style={{ marginRight: 6 }} />
-                Strength
-              </button>
-              <button
-                type="button"
-                style={{ ...styles.typeToggleBtn, ...(form.type === 'run' ? styles.typeToggleBtnActive : {}) }}
-                onClick={() => setForm((f) => ({ ...f, type: 'run' }))}
-              >
-                <Footprints size={14} style={{ marginRight: 6 }} />
-                Run
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} style={styles.form}>
-              {form.type === 'strength' ? (
-                <>
-                  <label style={styles.label}>
-                    Exercise
-                    <input
-                      style={styles.input}
-                      list="strength-options"
-                      value={form.exercise}
-                      onChange={(e) => setForm((f) => ({ ...f, exercise: e.target.value }))}
-                      placeholder="e.g. Bench Press"
-                      required
-                      autoFocus
-                    />
-                    <datalist id="strength-options">
-                      {strengthNames.map((n) => (
-                        <option key={n} value={n} />
-                      ))}
-                    </datalist>
+            <form onSubmit={handleSubmit} style={S.form}>
+              {form.type === 'strength' ? <>
+                <label style={S.label}>
+                  Exercise
+                  <input style={S.input} list="strength-options" value={form.exercise}
+                    onChange={e => setForm(f => ({...f, exercise:e.target.value}))}
+                    placeholder="e.g. Bench Press" required autoFocus/>
+                  <datalist id="strength-options">
+                    {strengthNames.map(n => <option key={n} value={n}/>)}
+                  </datalist>
+                </label>
+                <div style={{...S.formRow, gap:6}}>
+                  <label style={{...S.label, flex:'0 0 38%'}}>
+                    Weight ({unit})
+                    <input style={S.input} type="number" inputMode="decimal" step="0.5" min="0"
+                      value={form.weight} onChange={e => setForm(f => ({...f, weight:e.target.value}))}
+                      placeholder="0" required/>
                   </label>
-
-                  <div style={styles.formRow}>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Weight ({unit})
-                      <input
-                        style={styles.input}
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={form.weight}
-                        onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
-                        placeholder="0"
-                        required
-                      />
-                    </label>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Reps
-                      <input
-                        style={styles.input}
-                        type="number"
-                        min="0"
-                        value={form.reps}
-                        onChange={(e) => setForm((f) => ({ ...f, reps: e.target.value }))}
-                        placeholder="optional"
-                      />
-                    </label>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Sets
-                      <input
-                        style={styles.input}
-                        type="number"
-                        min="0"
-                        value={form.sets}
-                        onChange={(e) => setForm((f) => ({ ...f, sets: e.target.value }))}
-                        placeholder="optional"
-                      />
-                    </label>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={styles.formRow}>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Distance ({distanceUnit})
-                      <input
-                        style={styles.input}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={form.distance}
-                        onChange={(e) => setForm((f) => ({ ...f, distance: e.target.value }))}
-                        placeholder="0"
-                        required
-                        autoFocus
-                      />
-                    </label>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Minutes
-                      <input
-                        style={styles.input}
-                        type="number"
-                        min="0"
-                        value={form.durationMin}
-                        onChange={(e) => setForm((f) => ({ ...f, durationMin: e.target.value }))}
-                        placeholder="0"
-                      />
-                    </label>
-                    <label style={{ ...styles.label, flex: 1 }}>
-                      Seconds
-                      <input
-                        style={styles.input}
-                        type="number"
-                        min="0"
-                        max="59"
-                        value={form.durationSec}
-                        onChange={(e) => setForm((f) => ({ ...f, durationSec: e.target.value }))}
-                        placeholder="0"
-                      />
-                    </label>
-                  </div>
-
-                  <label style={styles.label}>
-                    Route (optional)
-                    <input
-                      style={styles.input}
-                      value={form.route}
-                      onChange={(e) => setForm((f) => ({ ...f, route: e.target.value }))}
-                      placeholder="e.g. Corrimal loop"
-                    />
+                  <label style={{...S.label, flex:1}}>
+                    Reps
+                    <input style={S.input} type="number" inputMode="numeric" min="0"
+                      value={form.reps} onChange={e => setForm(f => ({...f, reps:e.target.value}))}
+                      placeholder="—"/>
                   </label>
-                </>
-              )}
+                  <label style={{...S.label, flex:1}}>
+                    Sets
+                    <input style={S.input} type="number" inputMode="numeric" min="0"
+                      value={form.sets} onChange={e => setForm(f => ({...f, sets:e.target.value}))}
+                      placeholder="—"/>
+                  </label>
+                </div>
+              </> : <>
+                <div style={{...S.formRow, gap:6}}>
+                  <label style={{...S.label, flex:1}}>
+                    Distance ({distanceUnit})
+                    <input style={S.input} type="number" inputMode="decimal" step="0.01" min="0"
+                      value={form.distance} onChange={e => setForm(f => ({...f, distance:e.target.value}))}
+                      placeholder="0" required autoFocus/>
+                  </label>
+                  <label style={{...S.label, flex:1}}>
+                    Minutes
+                    <input style={S.input} type="number" inputMode="numeric" min="0"
+                      value={form.durationMin} onChange={e => setForm(f => ({...f, durationMin:e.target.value}))}
+                      placeholder="0"/>
+                  </label>
+                  <label style={{...S.label, flex:1}}>
+                    Seconds
+                    <input style={S.input} type="number" inputMode="numeric" min="0" max="59"
+                      value={form.durationSec} onChange={e => setForm(f => ({...f, durationSec:e.target.value}))}
+                      placeholder="0"/>
+                  </label>
+                </div>
+                <label style={S.label}>
+                  Route (optional)
+                  <input style={S.input} value={form.route}
+                    onChange={e => setForm(f => ({...f, route:e.target.value}))}
+                    placeholder="e.g. Corrimal loop"/>
+                </label>
+              </>}
 
-              <label style={styles.label}>
+              <label style={S.label}>
                 Date
-                <input
-                  style={styles.input}
-                  type="date"
-                  value={form.date}
-                  max={todayISO()}
-                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                />
+                <input style={S.input} type="date" value={form.date} max={todayISO()}
+                  onChange={e => setForm(f => ({...f, date:e.target.value}))}/>
               </label>
-
-              <label style={styles.label}>
+              <label style={S.label}>
                 Notes
-                <textarea
-                  style={{ ...styles.input, minHeight: 56, resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  placeholder="How did it feel?"
-                />
+                <textarea style={{...S.input, minHeight:56, resize:'vertical', fontFamily:'Inter,sans-serif'}}
+                  value={form.notes} onChange={e => setForm(f => ({...f, notes:e.target.value}))}
+                  placeholder="How did it feel?"/>
               </label>
-
-              <button type="submit" style={styles.submitBtn}>
-                Save workout
-              </button>
+              <button type="submit" style={S.submitBtn}>Save workout</button>
             </form>
           </div>
         </div>
@@ -717,8 +533,8 @@ export default function IronLog() {
 
       {/* Toast */}
       {toast && (
-        <div style={styles.toast}>
-          {toast.startsWith('New PR') && <Flame size={16} color="#E8472B" style={{ marginRight: 8 }} />}
+        <div style={S.toast}>
+          {toast.startsWith('New PR') && <Flame size={16} color="#E8472B" style={{marginRight:8}}/>}
           {toast}
         </div>
       )}
@@ -726,66 +542,43 @@ export default function IronLog() {
   );
 }
 
+// ─── WorkoutRow ───────────────────────────────────────────────────────────────
 function WorkoutRow({ w, unit, distanceUnit, pr, onDelete, onView }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const isRun = w.type === 'run';
-  const pace = isRun ? paceSecondsPerUnit(w.distance, w.durationSeconds) : null;
+  const pace  = isRun ? paceSecondsPerUnit(w.distance, w.durationSeconds) : null;
   return (
-    <div style={styles.row}>
-      <div style={styles.rowMain} onClick={() => onView(w.type, w.exercise)}>
-        <div style={styles.rowTop}>
-          {isRun ? (
-            <Footprints size={13} color="#5B6470" style={{ marginRight: 2 }} />
-          ) : (
-            <Dumbbell size={13} color="#5B6470" style={{ marginRight: 2 }} />
-          )}
-          <span style={styles.exerciseName}>{w.exercise}</span>
-          {pr && (
-            <span style={styles.prBadge}>
-              <Flame size={11} style={{ marginRight: 3 }} /> PR
-            </span>
-          )}
+    <div style={S.row}>
+      <div style={S.rowMain} onClick={() => onView(w.type, w.exercise)}>
+        <div style={S.rowTop}>
+          {isRun ? <Footprints size={13} color="#5B6470" style={{marginRight:2}}/> : <Dumbbell size={13} color="#5B6470" style={{marginRight:2}}/>}
+          <span style={S.exerciseName}>{w.exercise}</span>
+          {pr && <span style={S.prBadge}><Flame size={11} style={{marginRight:3}}/> PR</span>}
         </div>
-        <div style={styles.rowMeta}>
-          {isRun ? (
-            <>
-              <span style={styles.weightVal}>
-                {w.distance}
-                <span style={styles.unitSm}>{distanceUnit}</span>
-              </span>
-              <span style={styles.repsVal}>{formatDuration(w.durationSeconds)}</span>
-              {pace != null && <span style={styles.repsVal}>{formatPace(pace, distanceUnit)} pace</span>}
-            </>
-          ) : (
-            <>
-              <span style={styles.weightVal}>
-                {w.weight}
-                <span style={styles.unitSm}>{unit}</span>
-              </span>
-              {(w.sets || w.reps) && (
-                <span style={styles.repsVal}>
-                  {w.sets ? `${w.sets} × ` : ''}
-                  {w.reps ? `${w.reps} reps` : ''}
-                </span>
-              )}
-            </>
-          )}
-          <span style={styles.dateVal}>{formatDate(w.date)}</span>
+        <div style={S.rowMeta}>
+          {isRun ? <>
+            <span style={S.weightVal}>{w.distance}<span style={S.unitSm}>{distanceUnit}</span></span>
+            <span style={S.repsVal}>{formatDuration(w.durationSeconds)}</span>
+            {pace != null && <span style={S.repsVal}>{formatPace(pace, distanceUnit)} pace</span>}
+          </> : <>
+            <span style={S.weightVal}>{w.weight}<span style={S.unitSm}>{unit}</span></span>
+            {(w.sets||w.reps) && <span style={S.repsVal}>{w.sets?`${w.sets} × `:''}{w.reps?`${w.reps} reps`:''}</span>}
+          </>}
+          <span style={S.dateVal}>{formatDate(w.date)}</span>
         </div>
-        {w.notes && <div style={styles.noteText}>{w.notes}</div>}
+        {w.notes && <div style={S.noteText}>{w.notes}</div>}
       </div>
-      <div style={styles.rowActions}>
-        {confirmDelete ? (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={styles.confirmBtn} onClick={() => onDelete(w.id)}>Delete</button>
-            <button style={styles.cancelBtn} onClick={() => setConfirmDelete(false)}>Cancel</button>
-          </div>
-        ) : (
-          <button style={styles.iconBtnGhost} onClick={() => setConfirmDelete(true)} aria-label="Delete">
-            <Trash2 size={15} color="#5B6470" />
-          </button>
-        )}
-        <ChevronRight size={16} color="#3A3F45" />
+      <div style={S.rowActions}>
+        {confirmDelete
+          ? <div style={{display:'flex',gap:6}}>
+              <button style={S.confirmBtn} onClick={() => onDelete(w.id)}>Delete</button>
+              <button style={S.cancelBtn}  onClick={() => setConfirmDelete(false)}>Cancel</button>
+            </div>
+          : <button style={S.iconBtnGhost} onClick={() => setConfirmDelete(true)} aria-label="Delete">
+              <Trash2 size={15} color="#5B6470"/>
+            </button>
+        }
+        <ChevronRight size={16} color="#3A3F45"/>
       </div>
     </div>
   );
@@ -793,956 +586,366 @@ function WorkoutRow({ w, unit, distanceUnit, pr, onDelete, onView }) {
 
 function EmptyState({ onAdd }) {
   return (
-    <div style={styles.empty}>
-      <Dumbbell size={26} color="#3A3F45" />
-      <p style={styles.emptyText}>No workouts logged yet.</p>
-      <button style={styles.emptyBtn} onClick={onAdd}>Log your first set</button>
+    <div style={S.empty}>
+      <Dumbbell size={26} color="#3A3F45"/>
+      <p style={S.emptyText}>No workouts logged yet.</p>
+      <button style={S.emptyBtn} onClick={onAdd}>Log your first set</button>
     </div>
   );
 }
 
+// ─── ProgressView ─────────────────────────────────────────────────────────────
 function ProgressView({ activities, selectedActivity, setSelectedActivity, stats, unit, distanceUnit, onDelete }) {
-  if (activities.length === 0) {
-    return (
-      <div style={styles.empty}>
-        <TrendingUp size={26} color="#3A3F45" />
-        <p style={styles.emptyText}>Log a workout to start tracking progress.</p>
-      </div>
-    );
-  }
-
+  if (!activities.length) return (
+    <div style={S.empty}>
+      <TrendingUp size={26} color="#3A3F45"/>
+      <p style={S.emptyText}>Log a workout to start tracking progress.</p>
+    </div>
+  );
   const isRun = stats && stats.type === 'run';
-
   return (
     <div>
-      <div style={styles.exerciseSelectRow}>
-        {activities.map((a) => {
-          const active = selectedActivity && a.type === selectedActivity.type && a.name === selectedActivity.name;
+      <div style={S.exerciseSelectRow}>
+        {activities.map(a => {
+          const active = selectedActivity && a.type===selectedActivity.type && a.name===selectedActivity.name;
           return (
-            <button
-              key={activityKey(a.type, a.name)}
-              style={{ ...styles.exerciseChip, ...(active ? styles.exerciseChipActive : {}) }}
-              onClick={() => setSelectedActivity(a)}
-            >
-              {a.type === 'run' ? (
-                <Footprints size={12} style={{ marginRight: 5, verticalAlign: -2 }} />
-              ) : (
-                <Dumbbell size={12} style={{ marginRight: 5, verticalAlign: -2 }} />
-              )}
+            <button key={activityKey(a.type,a.name)}
+              style={{...S.exerciseChip,...(active?S.exerciseChipActive:{})}}
+              onClick={() => setSelectedActivity(a)}>
+              {a.type==='run'
+                ? <Footprints size={12} style={{marginRight:5,verticalAlign:-2}}/>
+                : <Dumbbell   size={12} style={{marginRight:5,verticalAlign:-2}}/>}
               {a.name}
             </button>
           );
         })}
       </div>
 
-      {stats && isRun && (
-        <>
-          <div style={styles.statRow}>
-            <div style={styles.statCard}>
-              <div style={styles.statNum}>{stats.count}</div>
-              <div style={styles.statLabel}>Times run</div>
+      {stats && isRun && <>
+        <div style={S.statRow}>
+          <div style={S.statCard}><div style={S.statNum}>{stats.count}</div><div style={S.statLabel}>Times run</div></div>
+          <div style={S.statCard}>
+            <div style={{...S.statNum, color:'#E8472B', fontSize:20}}>
+              {formatPace(stats.best.pace ?? paceSecondsPerUnit(stats.best.distance,stats.best.durationSeconds), distanceUnit)}
             </div>
-            <div style={styles.statCard}>
-              <div style={{ ...styles.statNum, color: '#E8472B', fontSize: 20 }}>
-                {formatPace(stats.best.pace ?? paceSecondsPerUnit(stats.best.distance, stats.best.durationSeconds), distanceUnit)}
-              </div>
-              <div style={styles.statLabel}>
-                <Award size={11} style={{ marginRight: 3, verticalAlign: -1 }} />
-                Best pace
-              </div>
-            </div>
-            <div style={styles.statCard}>
-              <div
-                style={{
-                  ...styles.statNum,
-                  color: stats.paceTrend < 0 ? '#4FA876' : stats.paceTrend > 0 ? '#C95C4A' : '#EDEAE2',
-                  fontSize: 20,
-                }}
-              >
-                {stats.paceTrend === 0 ? '—' : `${stats.paceTrend < 0 ? '-' : '+'}${formatDuration(Math.abs(stats.paceTrend))}`}
-              </div>
-              <div style={styles.statLabel}>pace vs last time</div>
-            </div>
+            <div style={S.statLabel}><Award size={11} style={{marginRight:3,verticalAlign:-1}}/> Best pace</div>
           </div>
-
-          <div style={styles.statRow}>
-            <div style={styles.statCard}>
-              <div style={styles.statNum}>
-                {stats.longest.distance}
-                <span style={styles.unitSm}>{distanceUnit}</span>
-              </div>
-              <div style={styles.statLabel}>Longest run</div>
+          <div style={S.statCard}>
+            <div style={{...S.statNum, fontSize:20, color: stats.paceTrend<0?'#4FA876':stats.paceTrend>0?'#C95C4A':'#EDEAE2'}}>
+              {stats.paceTrend===0 ? '—' : `${stats.paceTrend<0?'-':'+'}${formatDuration(Math.abs(stats.paceTrend))}`}
             </div>
-            <div style={{ ...styles.statCard, flex: 2 }}>
-              <div style={styles.statNum}>{formatDuration(stats.last.durationSeconds)}</div>
-              <div style={styles.statLabel}>Last run duration</div>
-            </div>
+            <div style={S.statLabel}>pace vs last</div>
           </div>
-
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>{selectedActivity.name} — pace over time (lower is faster)</div>
-            {stats.chartData.filter((d) => d.pace != null).length > 1 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={stats.chartData} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fill: '#5B6470', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={{ stroke: '#2C3036' }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    reversed
-                    tick={{ fill: '#5B6470', fontSize: 10.5, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={42}
-                    tickFormatter={(v) => formatDuration(v)}
-                    domain={['dataMin - 15', 'dataMax + 15']}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#1D2024',
-                      border: '1px solid #2C3036',
-                      borderRadius: 8,
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: 12,
+        </div>
+        <div style={S.statRow}>
+          <div style={S.statCard}>
+            <div style={S.statNum}>{stats.longest.distance}<span style={S.unitSm}>{distanceUnit}</span></div>
+            <div style={S.statLabel}>Longest run</div>
+          </div>
+          <div style={{...S.statCard, flex:2}}>
+            <div style={S.statNum}>{formatDuration(stats.last.durationSeconds)}</div>
+            <div style={S.statLabel}>Last duration</div>
+          </div>
+        </div>
+        <div style={S.chartCard}>
+          <div style={S.chartTitle}>{selectedActivity.name} — pace over time (lower is faster)</div>
+          {stats.chartData.filter(d => d.pace!=null).length > 1
+            ? <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={stats.chartData} margin={{top:10,right:12,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false}/>
+                  <XAxis dataKey="label" tick={{fill:'#5B6470',fontSize:11,fontFamily:'JetBrains Mono,monospace'}} axisLine={{stroke:'#2C3036'}} tickLine={false}/>
+                  <YAxis reversed tick={{fill:'#5B6470',fontSize:10.5,fontFamily:'JetBrains Mono,monospace'}} axisLine={false} tickLine={false} width={42}
+                    tickFormatter={v => formatDuration(v)} domain={['dataMin - 15','dataMax + 15']}/>
+                  <Tooltip contentStyle={{background:'#1D2024',border:'1px solid #2C3036',borderRadius:8,fontFamily:'Inter,sans-serif',fontSize:12}}
+                    labelStyle={{color:'#8A9099'}} itemStyle={{color:'#EDEAE2'}}
+                    formatter={v => [formatPace(v, distanceUnit),'Pace']}/>
+                  <Line type="monotone" dataKey="pace" stroke="#E8472B" strokeWidth={2.5} connectNulls
+                    dot={props => {
+                      const {cx,cy,payload,index} = props;
+                      return <Dot key={`dot-${index}`} cx={cx} cy={cy} r={payload.isBest?5:3.5}
+                        fill={payload.isBest?'#E8472B':'#14161A'} stroke="#E8472B" strokeWidth={2}/>;
                     }}
-                    labelStyle={{ color: '#8A9099' }}
-                    itemStyle={{ color: '#EDEAE2' }}
-                    formatter={(value) => [formatPace(value, distanceUnit), 'Pace']}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="pace"
-                    stroke="#E8472B"
-                    strokeWidth={2.5}
-                    connectNulls
-                    dot={(props) => {
-                      const { cx, cy, payload, index } = props;
-                      return (
-                        <Dot
-                          key={`dot-${index}`}
-                          cx={cx}
-                          cy={cy}
-                          r={payload.isBest ? 5 : 3.5}
-                          fill={payload.isBest ? '#E8472B' : '#14161A'}
-                          stroke="#E8472B"
-                          strokeWidth={2}
-                        />
-                      );
-                    }}
-                    activeDot={{ r: 6, fill: '#E8472B' }}
-                  />
+                    activeDot={{r:6,fill:'#E8472B'}}/>
                 </LineChart>
               </ResponsiveContainer>
-            ) : (
-              <p style={styles.chartEmpty}>Log this run at least twice to see a pace trend.</p>
-            )}
-          </div>
+            : <p style={S.chartEmpty}>Log this run at least twice to see a pace trend.</p>}
+        </div>
+        <div style={S.sectionBlock}>
+          <div style={S.sectionHeading}><span>SESSION HISTORY</span></div>
+          {stats.entries.map(w => <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit}
+            pr={stats.best && w.id===stats.best.id} onDelete={onDelete} onView={()=>{}}/>)}
+        </div>
+      </>}
 
-          <div style={styles.sectionBlock}>
-            <div style={styles.sectionHeading}>
-              <span>SESSION HISTORY</span>
-            </div>
-            {stats.entries.map((w) => (
-              <WorkoutRow
-                key={w.id}
-                w={w}
-                unit={unit}
-                distanceUnit={distanceUnit}
-                pr={stats.best && w.id === stats.best.id}
-                onDelete={onDelete}
-                onView={() => {}}
-              />
-            ))}
+      {stats && !isRun && <>
+        <div style={S.statRow}>
+          <div style={S.statCard}><div style={S.statNum}>{stats.count}</div><div style={S.statLabel}>Times done</div></div>
+          <div style={S.statCard}>
+            <div style={{...S.statNum, color:'#E8472B'}}>{stats.max.weight}<span style={S.unitSm}>{unit}</span></div>
+            <div style={S.statLabel}><Award size={11} style={{marginRight:3,verticalAlign:-1}}/> Best</div>
           </div>
-        </>
-      )}
-
-      {stats && !isRun && (
-        <>
-          <div style={styles.statRow}>
-            <div style={styles.statCard}>
-              <div style={styles.statNum}>{stats.count}</div>
-              <div style={styles.statLabel}>Times done</div>
+          <div style={S.statCard}>
+            <div style={{...S.statNum, color:stats.trend>0?'#4FA876':stats.trend<0?'#C95C4A':'#EDEAE2'}}>
+              {stats.trend>0?'+':''}{stats.trend}
             </div>
-            <div style={styles.statCard}>
-              <div style={{ ...styles.statNum, color: '#E8472B' }}>
-                {stats.max.weight}
-                <span style={styles.unitSm}>{unit}</span>
-              </div>
-              <div style={styles.statLabel}>
-                <Award size={11} style={{ marginRight: 3, verticalAlign: -1 }} />
-                Best
-              </div>
-            </div>
-            <div style={styles.statCard}>
-              <div
-                style={{
-                  ...styles.statNum,
-                  color: stats.trend > 0 ? '#4FA876' : stats.trend < 0 ? '#C95C4A' : '#EDEAE2',
-                }}
-              >
-                {stats.trend > 0 ? '+' : ''}
-                {stats.trend}
-              </div>
-              <div style={styles.statLabel}>vs last time</div>
-            </div>
+            <div style={S.statLabel}>vs last time</div>
           </div>
-
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>{selectedActivity.name} — weight over time</div>
-            {stats.chartData.length > 1 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={stats.chartData} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fill: '#5B6470', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={{ stroke: '#2C3036' }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: '#5B6470', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={36}
-                    domain={['dataMin - 5', 'dataMax + 5']}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#1D2024',
-                      border: '1px solid #2C3036',
-                      borderRadius: 8,
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: 12,
+        </div>
+        <div style={S.chartCard}>
+          <div style={S.chartTitle}>{selectedActivity.name} — weight over time</div>
+          {stats.chartData.length > 1
+            ? <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={stats.chartData} margin={{top:10,right:12,left:-18,bottom:0}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false}/>
+                  <XAxis dataKey="label" tick={{fill:'#5B6470',fontSize:11,fontFamily:'JetBrains Mono,monospace'}} axisLine={{stroke:'#2C3036'}} tickLine={false}/>
+                  <YAxis tick={{fill:'#5B6470',fontSize:11,fontFamily:'JetBrains Mono,monospace'}} axisLine={false} tickLine={false} width={36} domain={['dataMin - 5','dataMax + 5']}/>
+                  <Tooltip contentStyle={{background:'#1D2024',border:'1px solid #2C3036',borderRadius:8,fontFamily:'Inter,sans-serif',fontSize:12}}
+                    labelStyle={{color:'#8A9099'}} itemStyle={{color:'#EDEAE2'}}
+                    formatter={v => [`${v} ${unit}`,'Weight']}/>
+                  <Line type="monotone" dataKey="weight" stroke="#E8472B" strokeWidth={2.5}
+                    dot={props => {
+                      const {cx,cy,payload,index} = props;
+                      return <Dot key={`dot-${index}`} cx={cx} cy={cy} r={payload.isPR?5:3.5}
+                        fill={payload.isPR?'#E8472B':'#14161A'} stroke="#E8472B" strokeWidth={2}/>;
                     }}
-                    labelStyle={{ color: '#8A9099' }}
-                    itemStyle={{ color: '#EDEAE2' }}
-                    formatter={(value) => [`${value} ${unit}`, 'Weight']}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="weight"
-                    stroke="#E8472B"
-                    strokeWidth={2.5}
-                    dot={(props) => {
-                      const { cx, cy, payload, index } = props;
-                      return (
-                        <Dot
-                          key={`dot-${index}`}
-                          cx={cx}
-                          cy={cy}
-                          r={payload.isPR ? 5 : 3.5}
-                          fill={payload.isPR ? '#E8472B' : '#14161A'}
-                          stroke="#E8472B"
-                          strokeWidth={2}
-                        />
-                      );
-                    }}
-                    activeDot={{ r: 6, fill: '#E8472B' }}
-                  />
+                    activeDot={{r:6,fill:'#E8472B'}}/>
                 </LineChart>
               </ResponsiveContainer>
-            ) : (
-              <p style={styles.chartEmpty}>Log this exercise at least twice to see a trend line.</p>
-            )}
-          </div>
-
-          <div style={styles.sectionBlock}>
-            <div style={styles.sectionHeading}>
-              <span>SESSION HISTORY</span>
-            </div>
-            {stats.entries.map((w) => (
-              <WorkoutRow
-                key={w.id}
-                w={w}
-                unit={unit}
-                distanceUnit={distanceUnit}
-                pr={w.weight >= stats.max.weight}
-                onDelete={onDelete}
-                onView={() => {}}
-              />
-            ))}
-          </div>
-        </>
-      )}
+            : <p style={S.chartEmpty}>Log this exercise at least twice to see a trend line.</p>}
+        </div>
+        <div style={S.sectionBlock}>
+          <div style={S.sectionHeading}><span>SESSION HISTORY</span></div>
+          {stats.entries.map(w => <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit}
+            pr={w.weight >= stats.max.weight} onDelete={onDelete} onView={()=>{}}/>)}
+        </div>
+      </>}
     </div>
   );
 }
 
-function CalendarFrequencyView({
-  workouts,
-  uniqueVisitDates,
-  calendarMonth,
-  setCalendarMonth,
-  granularity,
-  setGranularity,
-  selectedDay,
-  setSelectedDay,
-  unit,
-  distanceUnit,
-  onDelete,
-}) {
-  const visitSet = useMemo(() => new Set(uniqueVisitDates), [uniqueVisitDates]);
-  const today = todayISO();
+// ─── CalendarFrequencyView ────────────────────────────────────────────────────
+function CalendarFrequencyView({ workouts, uniqueVisitDates, calendarMonth, setCalendarMonth,
+  granularity, setGranularity, selectedDay, setSelectedDay, unit, distanceUnit, onDelete }) {
 
-  // Build the 6x7 grid for the visible month (Monday-start weeks)
+  const visitSet = useMemo(() => new Set(uniqueVisitDates), [uniqueVisitDates]);
+  const today    = todayISO();
+
   const gridDays = useMemo(() => {
-    const first = startOfMonth(calendarMonth);
+    const first     = startOfMonth(calendarMonth);
     const gridStart = startOfWeek(first);
-    const days = [];
-    for (let i = 0; i < 42; i++) {
-      const d = addDays(gridStart, i);
-      days.push(d);
-    }
-    return days;
+    return Array.from({length:42}, (_,i) => addDays(gridStart, i));
   }, [calendarMonth]);
 
-  const monthLabel = calendarMonth.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
-  const monthVisitCount = uniqueVisitDates.filter((iso) => {
+  const monthLabel = calendarMonth.toLocaleDateString('en-AU', { month:'long', year:'numeric' });
+  const monthVisitCount = uniqueVisitDates.filter(iso => {
     const d = parseISO(iso);
-    return d.getFullYear() === calendarMonth.getFullYear() && d.getMonth() === calendarMonth.getMonth();
+    return d.getFullYear()===calendarMonth.getFullYear() && d.getMonth()===calendarMonth.getMonth();
   }).length;
 
-  const buckets = useMemo(() => buildVisitBuckets(uniqueVisitDates, granularity), [uniqueVisitDates, granularity]);
-  const slope = useMemo(() => trendSlope(buckets), [buckets]);
-
-  // Compare average of the second half of the buckets vs the first half for a plain-language read.
+  const buckets     = useMemo(() => buildVisitBuckets(uniqueVisitDates, granularity), [uniqueVisitDates, granularity]);
+  const slope       = useMemo(() => trendSlope(buckets), [buckets]);
   const trendSummary = useMemo(() => {
     if (buckets.length < 4) return null;
-    const mid = Math.floor(buckets.length / 2);
-    const firstHalf = buckets.slice(0, mid);
-    const secondHalf = buckets.slice(mid);
-    const avg = (arr) => arr.reduce((a, b) => a + b.count, 0) / arr.length;
-    const a = avg(firstHalf);
-    const b = avg(secondHalf);
-    if (a === 0 && b === 0) return { dir: 'flat', pct: 0 };
-    const pct = a === 0 ? 100 : Math.round(((b - a) / a) * 100);
-    const dir = slope > 0.03 ? 'up' : slope < -0.03 ? 'down' : 'flat';
+    const mid  = Math.floor(buckets.length/2);
+    const avg  = arr => arr.reduce((a,b)=>a+b.count,0)/arr.length;
+    const a    = avg(buckets.slice(0,mid));
+    const b    = avg(buckets.slice(mid));
+    if (a===0 && b===0) return { dir:'flat', pct:0 };
+    const pct  = a===0 ? 100 : Math.round(((b-a)/a)*100);
+    const dir  = slope>0.03 ? 'up' : slope<-0.03 ? 'down' : 'flat';
     return { dir, pct };
   }, [buckets, slope]);
 
-  const selectedDayWorkouts = selectedDay ? workouts.filter((w) => w.date === selectedDay) : [];
-
-  const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const selectedDayWorkouts = selectedDay ? workouts.filter(w => w.date===selectedDay) : [];
+  const weekdayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   return (
     <div>
-      {/* Month calendar */}
-      <div style={styles.calendarCard}>
-        <div style={styles.calendarNav}>
-          <button style={styles.navBtn} onClick={() => setCalendarMonth((m) => addMonths(m, -1))} aria-label="Previous month">
-            <ChevronLeft size={18} color="#8A9099" />
+      <div style={S.calendarCard}>
+        <div style={S.calendarNav}>
+          <button style={S.navBtn} onClick={() => setCalendarMonth(m => addMonths(m,-1))} aria-label="Prev">
+            <ChevronLeft size={18} color="#8A9099"/>
           </button>
-          <div style={styles.calendarMonthLabel}>{monthLabel}</div>
-          <button style={styles.navBtn} onClick={() => setCalendarMonth((m) => addMonths(m, 1))} aria-label="Next month">
-            <ChevronRight size={18} color="#8A9099" />
+          <div style={S.calendarMonthLabel}>{monthLabel}</div>
+          <button style={S.navBtn} onClick={() => setCalendarMonth(m => addMonths(m,1))} aria-label="Next">
+            <ChevronRight size={18} color="#8A9099"/>
           </button>
         </div>
-
-        <div style={styles.weekdayRow}>
-          {weekdayLabels.map((d) => (
-            <div key={d} style={styles.weekdayCell}>{d}</div>
-          ))}
+        <div style={S.weekdayRow}>
+          {weekdayLabels.map(d => <div key={d} style={S.weekdayCell}>{d}</div>)}
         </div>
-
-        <div style={styles.calendarGrid}>
-          {gridDays.map((d) => {
-            const iso = toISO(d);
-            const inMonth = d.getMonth() === calendarMonth.getMonth();
-            const visited = visitSet.has(iso);
-            const isToday = iso === today;
+        <div style={S.calendarGrid}>
+          {gridDays.map(d => {
+            const iso        = toISO(d);
+            const inMonth    = d.getMonth() === calendarMonth.getMonth();
+            const visited    = visitSet.has(iso);
+            const isToday    = iso === today;
             const isSelected = iso === selectedDay;
             return (
-              <button
-                key={iso}
+              <button key={iso}
                 onClick={() => setSelectedDay(isSelected ? null : (visited ? iso : null))}
                 disabled={!visited}
                 style={{
-                  ...styles.dayCell,
-                  ...(inMonth ? {} : styles.dayCellFaded),
-                  ...(visited ? styles.dayCellVisited : {}),
-                  ...(isToday ? styles.dayCellToday : {}),
-                  ...(isSelected ? styles.dayCellSelected : {}),
+                  ...S.dayCell,
+                  ...(inMonth ? {} : S.dayCellFaded),
+                  ...(visited    ? S.dayCellVisited  : {}),
+                  ...(isToday    ? S.dayCellToday    : {}),
+                  ...(isSelected ? S.dayCellSelected : {}),
                   cursor: visited ? 'pointer' : 'default',
-                }}
-              >
+                }}>
                 {d.getDate()}
               </button>
             );
           })}
         </div>
-
-        <div style={styles.calendarFooter}>
-          <span style={styles.calendarFooterText}>
-            <Flame size={12} color="#E8472B" style={{ marginRight: 4, verticalAlign: -2 }} />
-            {monthVisitCount} {monthVisitCount === 1 ? 'visit' : 'visits'} this month
+        <div style={S.calendarFooter}>
+          <span style={S.calendarFooterText}>
+            <Flame size={12} color="#E8472B" style={{marginRight:4,verticalAlign:-2}}/>
+            {monthVisitCount} {monthVisitCount===1 ? 'visit' : 'visits'} this month
           </span>
         </div>
       </div>
 
       {selectedDay && (
-        <div style={styles.sectionBlock}>
-          <div style={styles.sectionHeading}>
-            <span>{formatDate(selectedDay).toUpperCase()}</span>
-          </div>
-          {selectedDayWorkouts.map((w) => (
-            <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={false} onDelete={onDelete} onView={() => {}} />
-          ))}
+        <div style={S.sectionBlock}>
+          <div style={S.sectionHeading}><span>{formatDate(selectedDay).toUpperCase()}</span></div>
+          {selectedDayWorkouts.map(w =>
+            <WorkoutRow key={w.id} w={w} unit={unit} distanceUnit={distanceUnit} pr={false} onDelete={onDelete} onView={()=>{}}/>
+          )}
         </div>
       )}
 
-      {/* Frequency trend */}
-      <div style={styles.sectionHeading}>
-        <span>VISIT FREQUENCY</span>
-      </div>
-      <div style={styles.granularityRow}>
-        {['week', 'month', 'year'].map((g) => (
-          <button
-            key={g}
-            style={{ ...styles.granularityChip, ...(granularity === g ? styles.granularityChipActive : {}) }}
-            onClick={() => setGranularity(g)}
-          >
-            {g}
-          </button>
+      <div style={S.sectionHeading}><span>VISIT FREQUENCY</span></div>
+      <div style={S.granularityRow}>
+        {['week','month','year'].map(g => (
+          <button key={g} style={{...S.granularityChip,...(granularity===g?S.granularityChipActive:{})}}
+            onClick={() => setGranularity(g)}>{g}</button>
         ))}
       </div>
 
       {trendSummary && (
-        <div style={styles.trendBanner}>
-          {trendSummary.dir === 'up' && <TrendingUp size={16} color="#4FA876" />}
-          {trendSummary.dir === 'down' && <TrendingDown size={16} color="#C95C4A" />}
-          {trendSummary.dir === 'flat' && <Minus size={16} color="#8A9099" />}
-          <span style={styles.trendBannerText}>
-            {trendSummary.dir === 'up' &&
-              `Visits are trending up — averaging ${Math.abs(trendSummary.pct)}% more per ${granularity} in the recent half of your log.`}
-            {trendSummary.dir === 'down' &&
-              `Visits have slowed — averaging ${Math.abs(trendSummary.pct)}% fewer per ${granularity} recently than earlier on.`}
-            {trendSummary.dir === 'flat' && `Your visit frequency has stayed roughly steady over time.`}
+        <div style={S.trendBanner}>
+          {trendSummary.dir==='up'   && <TrendingUp   size={16} color="#4FA876"/>}
+          {trendSummary.dir==='down' && <TrendingDown size={16} color="#C95C4A"/>}
+          {trendSummary.dir==='flat' && <Minus        size={16} color="#8A9099"/>}
+          <span style={S.trendBannerText}>
+            {trendSummary.dir==='up'   && `Visits are trending up — averaging ${Math.abs(trendSummary.pct)}% more per ${granularity} in the recent half of your log.`}
+            {trendSummary.dir==='down' && `Visits have slowed — averaging ${Math.abs(trendSummary.pct)}% fewer per ${granularity} recently than earlier on.`}
+            {trendSummary.dir==='flat' && `Your visit frequency has stayed roughly steady over time.`}
           </span>
         </div>
       )}
 
-      <div style={styles.chartCard}>
-        {buckets.length > 1 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={buckets} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: '#5B6470', fontSize: 10.5, fontFamily: 'JetBrains Mono, monospace' }}
-                axisLine={{ stroke: '#2C3036' }}
-                tickLine={false}
-                interval={buckets.length > 10 ? Math.ceil(buckets.length / 10) - 1 : 0}
-              />
-              <YAxis
-                tick={{ fill: '#5B6470', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                axisLine={false}
-                tickLine={false}
-                width={28}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: '#1D2024',
-                  border: '1px solid #2C3036',
-                  borderRadius: 8,
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: 12,
-                }}
-                labelStyle={{ color: '#8A9099' }}
-                itemStyle={{ color: '#EDEAE2' }}
-                formatter={(value) => [value, 'Visits']}
-              />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {buckets.map((b, i) => (
-                  <Cell key={i} fill={b.count === 0 ? '#24272C' : '#E8472B'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <p style={styles.chartEmpty}>Log a few more sessions to see your visit frequency trend.</p>
-        )}
+      <div style={S.chartCard}>
+        {buckets.length > 1
+          ? <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={buckets} margin={{top:10,right:12,left:-18,bottom:0}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C3036" vertical={false}/>
+                <XAxis dataKey="label" tick={{fill:'#5B6470',fontSize:10.5,fontFamily:'JetBrains Mono,monospace'}}
+                  axisLine={{stroke:'#2C3036'}} tickLine={false}
+                  interval={buckets.length>10 ? Math.ceil(buckets.length/10)-1 : 0}/>
+                <YAxis tick={{fill:'#5B6470',fontSize:11,fontFamily:'JetBrains Mono,monospace'}}
+                  axisLine={false} tickLine={false} width={28} allowDecimals={false}/>
+                <Tooltip contentStyle={{background:'#1D2024',border:'1px solid #2C3036',borderRadius:8,fontFamily:'Inter,sans-serif',fontSize:12}}
+                  labelStyle={{color:'#8A9099'}} itemStyle={{color:'#EDEAE2'}}
+                  formatter={v => [v,'Visits']}/>
+                <Bar dataKey="count" radius={[4,4,0,0]}>
+                  {buckets.map((b,i) => <Cell key={i} fill={b.count===0?'#24272C':'#E8472B'}/>)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          : <p style={S.chartEmpty}>Log a few more sessions to see your visit frequency trend.</p>}
       </div>
     </div>
   );
 }
 
-const fontImports = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-`;
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#14161A',
-    color: '#EDEAE2',
-    fontFamily: "'Inter', sans-serif",
-    paddingBottom: 100,
-    maxWidth: 480,
-    margin: '0 auto',
-    position: 'relative',
-  },
-  loadingWrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '20px 18px 14px',
-  },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: 12 },
-  barIcon: { display: 'flex', alignItems: 'center', gap: 1 },
-  plate: { width: 6, height: 22, background: '#E8472B', borderRadius: 1 },
-  bar: { width: 16, height: 4, background: '#5B6470', borderRadius: 2 },
-  title: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 26,
-    letterSpacing: 2,
-    margin: 0,
-    lineHeight: 1,
-  },
-  subtitle: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 10,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: '#5B6470',
-    margin: '3px 0 0',
-  },
-  unitToggleGroup: {
-    display: 'flex',
-    gap: 6,
-  },
-  unitToggle: {
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    color: '#EDEAE2',
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12,
-    fontWeight: 500,
-    padding: '7px 14px',
-    borderRadius: 20,
-    cursor: 'pointer',
-    textTransform: 'uppercase',
-  },
-  tabs: {
-    display: 'flex',
-    gap: 8,
-    padding: '0 18px 16px',
-    borderBottom: '1px solid #21242A',
-  },
-  tab: {
-    display: 'flex',
-    alignItems: 'center',
-    background: 'transparent',
-    border: 'none',
-    color: '#5B6470',
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 13,
-    fontWeight: 600,
-    padding: '8px 4px',
-    cursor: 'pointer',
-    borderBottom: '2px solid transparent',
-    marginBottom: -1,
-  },
-  tabActive: {
-    color: '#EDEAE2',
-    borderBottom: '2px solid #E8472B',
-  },
-  main: { padding: '18px 18px 0' },
-  statRow: { display: 'flex', gap: 10, marginBottom: 22 },
-  statCard: {
-    flex: 1,
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    borderRadius: 12,
-    padding: '14px 10px',
-    textAlign: 'center',
-  },
-  statNum: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 26,
-    letterSpacing: 0.5,
-  },
-  statLabel: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: '#5B6470',
-    marginTop: 4,
-  },
-  sectionBlock: { marginBottom: 26 },
-  sectionHeading: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
-    letterSpacing: 1.5,
-    color: '#5B6470',
-    marginBottom: 10,
-  },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    background: '#1D2024',
-    border: '1px solid #24272C',
-    borderRadius: 10,
-    padding: '12px 14px',
-    marginBottom: 8,
-    cursor: 'pointer',
-  },
-  rowMain: { flex: 1 },
-  rowTop: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 },
-  exerciseName: { fontWeight: 600, fontSize: 14.5 },
-  prBadge: {
-    display: 'flex',
-    alignItems: 'center',
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 10,
-    fontWeight: 600,
-    color: '#E8472B',
-    background: 'rgba(232,71,43,0.12)',
-    padding: '2px 7px',
-    borderRadius: 20,
-  },
-  rowMeta: { display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
-  weightVal: { fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#EDEAE2', fontWeight: 500 },
-  unitSm: { fontSize: 10, color: '#5B6470', marginLeft: 2 },
-  repsVal: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: '#8A9099' },
-  dateVal: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#5B6470' },
-  noteText: { fontSize: 12, color: '#8A9099', marginTop: 5, fontStyle: 'italic' },
-  rowActions: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 },
-  iconBtnGhost: { background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' },
-  confirmBtn: {
-    background: '#E8472B',
-    color: '#14161A',
-    border: 'none',
-    fontSize: 11,
-    fontWeight: 600,
-    padding: '5px 10px',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  cancelBtn: {
-    background: 'transparent',
-    color: '#8A9099',
-    border: '1px solid #2C3036',
-    fontSize: 11,
-    padding: '5px 10px',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '40px 20px',
-    textAlign: 'center',
-  },
-  emptyText: { color: '#5B6470', fontSize: 13, margin: '12px 0 16px' },
-  emptyBtn: {
-    background: '#E8472B',
-    color: '#14161A',
-    border: 'none',
-    fontWeight: 600,
-    fontSize: 13,
-    padding: '10px 18px',
-    borderRadius: 8,
-    cursor: 'pointer',
-  },
-  exerciseSelectRow: {
-    display: 'flex',
-    gap: 8,
-    overflowX: 'auto',
-    paddingBottom: 14,
-    marginBottom: 6,
-  },
-  exerciseChip: {
-    flexShrink: 0,
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    color: '#8A9099',
-    fontSize: 12.5,
-    fontWeight: 500,
-    padding: '8px 14px',
-    borderRadius: 20,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  exerciseChipActive: {
-    background: '#E8472B',
-    border: '1px solid #E8472B',
-    color: '#14161A',
-    fontWeight: 600,
-  },
-  chartCard: {
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    borderRadius: 12,
-    padding: '16px 8px 10px 4px',
-    marginBottom: 24,
-  },
-  chartTitle: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
-    color: '#8A9099',
-    marginBottom: 6,
-    paddingLeft: 12,
-    textTransform: 'lowercase',
-  },
-  chartEmpty: {
-    color: '#5B6470',
-    fontSize: 12.5,
-    textAlign: 'center',
-    padding: '40px 20px',
-  },
-  calendarCard: {
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    borderRadius: 12,
-    padding: '14px 12px 10px',
-    marginBottom: 20,
-  },
-  calendarNav: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  navBtn: {
-    background: '#24272C',
-    border: 'none',
-    borderRadius: 8,
-    width: 30,
-    height: 30,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-  },
-  calendarMonthLabel: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 18,
-    letterSpacing: 0.6,
-  },
-  weekdayRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    marginBottom: 4,
-  },
-  weekdayCell: {
-    textAlign: 'center',
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 9.5,
-    color: '#5B6470',
-    padding: '4px 0',
-    textTransform: 'uppercase',
-  },
-  calendarGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: 4,
-  },
-  dayCell: {
-    aspectRatio: '1',
-    background: 'transparent',
-    border: 'none',
-    borderRadius: 8,
-    color: '#5B6470',
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 12.5,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayCellFaded: {
-    color: '#33373D',
-  },
-  dayCellVisited: {
-    background: 'rgba(232,71,43,0.16)',
-    color: '#EDEAE2',
-    fontWeight: 600,
-  },
-  dayCellToday: {
-    boxShadow: 'inset 0 0 0 1.5px #5B6470',
-  },
-  dayCellSelected: {
-    background: '#E8472B',
-    color: '#14161A',
-  },
-  calendarFooter: {
-    borderTop: '1px solid #24272C',
-    marginTop: 10,
-    paddingTop: 10,
-  },
-  calendarFooterText: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11.5,
-    color: '#8A9099',
-  },
-  granularityRow: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 12,
-  },
-  granularityChip: {
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    color: '#8A9099',
-    fontSize: 12,
-    fontWeight: 500,
-    padding: '7px 16px',
-    borderRadius: 20,
-    cursor: 'pointer',
-    textTransform: 'capitalize',
-  },
-  granularityChipActive: {
-    background: '#E8472B',
-    border: '1px solid #E8472B',
-    color: '#14161A',
-    fontWeight: 600,
-  },
-  trendBanner: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 10,
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    borderRadius: 10,
-    padding: '12px 14px',
-    marginBottom: 14,
-  },
-  trendBannerText: {
-    fontSize: 12.5,
-    color: '#C7CAD1',
-    lineHeight: 1.5,
-  },
-  fab: {
-    position: 'fixed',
-    bottom: 28,
-    right: 24,
-    width: 54,
-    height: 54,
-    borderRadius: '50%',
-    background: '#E8472B',
-    border: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 4px 16px rgba(232,71,43,0.4)',
-  },
-  modalOverlay: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(10,11,13,0.7)',
-    display: 'flex',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    zIndex: 50,
-  },
-  modal: {
-    background: '#1A1C20',
-    borderTop: '1px solid #2C3036',
-    borderRadius: '18px 18px 0 0',
-    width: '100%',
-    maxWidth: 480,
-    padding: '18px 20px 28px',
-    maxHeight: '88vh',
-    overflowY: 'auto',
-  },
-  modalHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  modalTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: 1, margin: 0 },
-  typeToggleRow: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 16,
-  },
-  typeToggleBtn: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#14161A',
-    border: '1px solid #2C3036',
-    color: '#8A9099',
-    fontWeight: 600,
-    fontSize: 13,
-    padding: '10px 0',
-    borderRadius: 9,
-    cursor: 'pointer',
-  },
-  typeToggleBtnActive: {
-    background: 'rgba(232,71,43,0.14)',
-    border: '1px solid #E8472B',
-    color: '#EDEAE2',
-  },
-  iconBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: 4 },
-  form: { display: 'flex', flexDirection: 'column', gap: 14 },
-  formRow: { display: 'flex', gap: 10 },
-  label: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 10.5,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: '#5B6470',
-  },
-  input: {
-    background: '#14161A',
-    border: '1px solid #2C3036',
-    borderRadius: 8,
-    padding: '10px 12px',
-    color: '#EDEAE2',
-    fontSize: 14,
-    fontFamily: "'Inter', sans-serif",
-    outline: 'none',
-  },
-  submitBtn: {
-    background: '#E8472B',
-    color: '#14161A',
-    border: 'none',
-    fontWeight: 700,
-    fontSize: 14.5,
-    padding: '13px',
-    borderRadius: 10,
-    cursor: 'pointer',
-    marginTop: 6,
-  },
-  toast: {
-    position: 'fixed',
-    bottom: 96,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    background: '#1D2024',
-    border: '1px solid #2C3036',
-    color: '#EDEAE2',
-    padding: '10px 18px',
-    borderRadius: 30,
-    fontSize: 13,
-    fontWeight: 500,
-    display: 'flex',
-    alignItems: 'center',
-    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
-    zIndex: 60,
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const S = {
+  page:            { minHeight:'100vh', background:'#14161A', color:'#EDEAE2', fontFamily:"'Inter',sans-serif", paddingBottom:100, maxWidth:480, margin:'0 auto', position:'relative' },
+  loadingWrap:     { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh' },
+  header:          { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'20px 18px 14px' },
+  headerLeft:      { display:'flex', alignItems:'center', gap:12 },
+  barIcon:         { display:'flex', alignItems:'center', gap:1 },
+  plate:           { width:6, height:22, background:'#E8472B', borderRadius:1 },
+  bar:             { width:16, height:4, background:'#5B6470', borderRadius:2 },
+  title:           { fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:2, margin:0, lineHeight:1 },
+  subtitle:        { fontFamily:"'JetBrains Mono',monospace", fontSize:10, letterSpacing:1.5, textTransform:'uppercase', color:'#5B6470', margin:'3px 0 0' },
+  unitToggleGroup: { display:'flex', gap:6 },
+  unitToggle:      { background:'#1D2024', border:'1px solid #2C3036', color:'#EDEAE2', fontFamily:"'JetBrains Mono',monospace", fontSize:12, fontWeight:500, padding:'7px 14px', borderRadius:20, cursor:'pointer', textTransform:'uppercase' },
+  tabs:            { display:'flex', gap:8, padding:'0 18px 16px', borderBottom:'1px solid #21242A' },
+  tab:             { display:'flex', alignItems:'center', background:'transparent', border:'none', color:'#5B6470', fontFamily:"'Inter',sans-serif", fontSize:13, fontWeight:600, padding:'8px 4px', cursor:'pointer', borderBottom:'2px solid transparent', marginBottom:-1 },
+  tabActive:       { color:'#EDEAE2', borderBottom:'2px solid #E8472B' },
+  main:            { padding:'18px 18px 0' },
+  statRow:         { display:'flex', gap:10, marginBottom:22 },
+  statCard:        { flex:1, background:'#1D2024', border:'1px solid #2C3036', borderRadius:12, padding:'14px 10px', textAlign:'center' },
+  statNum:         { fontFamily:"'Bebas Neue',sans-serif", fontSize:26, letterSpacing:0.5 },
+  statLabel:       { fontFamily:"'JetBrains Mono',monospace", fontSize:9.5, letterSpacing:0.8, textTransform:'uppercase', color:'#5B6470', marginTop:4 },
+  sectionBlock:    { marginBottom:26 },
+  sectionHeading:  { display:'flex', alignItems:'center', gap:6, fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:1.5, color:'#5B6470', marginBottom:10 },
+  row:             { display:'flex', alignItems:'center', justifyContent:'space-between', background:'#1D2024', border:'1px solid #24272C', borderRadius:10, padding:'12px 14px', marginBottom:8, cursor:'pointer' },
+  rowMain:         { flex:1 },
+  rowTop:          { display:'flex', alignItems:'center', gap:8, marginBottom:4 },
+  exerciseName:    { fontWeight:600, fontSize:14.5 },
+  prBadge:         { display:'flex', alignItems:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:10, fontWeight:600, color:'#E8472B', background:'rgba(232,71,43,0.12)', padding:'2px 7px', borderRadius:20 },
+  rowMeta:         { display:'flex', alignItems:'baseline', gap:10, flexWrap:'wrap' },
+  weightVal:       { fontFamily:"'JetBrains Mono',monospace", fontSize:14, color:'#EDEAE2', fontWeight:500 },
+  unitSm:          { fontSize:10, color:'#5B6470', marginLeft:2 },
+  repsVal:         { fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:'#8A9099' },
+  dateVal:         { fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'#5B6470' },
+  noteText:        { fontSize:12, color:'#8A9099', marginTop:5, fontStyle:'italic' },
+  rowActions:      { display:'flex', alignItems:'center', gap:8, marginLeft:10 },
+  iconBtnGhost:    { background:'none', border:'none', cursor:'pointer', padding:4, display:'flex' },
+  confirmBtn:      { background:'#E8472B', color:'#14161A', border:'none', fontSize:11, fontWeight:600, padding:'5px 10px', borderRadius:6, cursor:'pointer' },
+  cancelBtn:       { background:'transparent', color:'#8A9099', border:'1px solid #2C3036', fontSize:11, padding:'5px 10px', borderRadius:6, cursor:'pointer' },
+  empty:           { display:'flex', flexDirection:'column', alignItems:'center', padding:'40px 20px', textAlign:'center' },
+  emptyText:       { color:'#5B6470', fontSize:13, margin:'12px 0 16px' },
+  emptyBtn:        { background:'#E8472B', color:'#14161A', border:'none', fontWeight:600, fontSize:13, padding:'10px 18px', borderRadius:8, cursor:'pointer' },
+  exerciseSelectRow: { display:'flex', gap:8, overflowX:'auto', paddingBottom:14, marginBottom:6 },
+  exerciseChip:    { flexShrink:0, background:'#1D2024', border:'1px solid #2C3036', color:'#8A9099', fontSize:12.5, fontWeight:500, padding:'8px 14px', borderRadius:20, cursor:'pointer', whiteSpace:'nowrap' },
+  exerciseChipActive: { background:'#E8472B', border:'1px solid #E8472B', color:'#14161A', fontWeight:600 },
+  chartCard:       { background:'#1D2024', border:'1px solid #2C3036', borderRadius:12, padding:'16px 8px 10px 4px', marginBottom:24 },
+  chartTitle:      { fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'#8A9099', marginBottom:6, paddingLeft:12, textTransform:'lowercase' },
+  chartEmpty:      { color:'#5B6470', fontSize:12.5, textAlign:'center', padding:'40px 20px' },
+  calendarCard:    { background:'#1D2024', border:'1px solid #2C3036', borderRadius:12, padding:'14px 12px 10px', marginBottom:20 },
+  calendarNav:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 },
+  navBtn:          { background:'#24272C', border:'none', borderRadius:8, width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' },
+  calendarMonthLabel: { fontFamily:"'Bebas Neue',sans-serif", fontSize:18, letterSpacing:0.6 },
+  weekdayRow:      { display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:4 },
+  weekdayCell:     { textAlign:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:9.5, color:'#5B6470', padding:'4px 0', textTransform:'uppercase' },
+  calendarGrid:    { display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 },
+  dayCell:         { aspectRatio:'1', background:'transparent', border:'none', borderRadius:8, color:'#5B6470', fontFamily:"'JetBrains Mono',monospace", fontSize:12.5, display:'flex', alignItems:'center', justifyContent:'center' },
+  dayCellFaded:    { color:'#33373D' },
+  dayCellVisited:  { background:'rgba(232,71,43,0.16)', color:'#EDEAE2', fontWeight:600 },
+  dayCellToday:    { boxShadow:'inset 0 0 0 1.5px #5B6470' },
+  dayCellSelected: { background:'#E8472B', color:'#14161A' },
+  calendarFooter:  { borderTop:'1px solid #24272C', marginTop:10, paddingTop:10 },
+  calendarFooterText: { fontFamily:"'JetBrains Mono',monospace", fontSize:11.5, color:'#8A9099' },
+  granularityRow:  { display:'flex', gap:8, marginBottom:12 },
+  granularityChip: { background:'#1D2024', border:'1px solid #2C3036', color:'#8A9099', fontSize:12, fontWeight:500, padding:'7px 16px', borderRadius:20, cursor:'pointer', textTransform:'capitalize' },
+  granularityChipActive: { background:'#E8472B', border:'1px solid #E8472B', color:'#14161A', fontWeight:600 },
+  trendBanner:     { display:'flex', alignItems:'flex-start', gap:10, background:'#1D2024', border:'1px solid #2C3036', borderRadius:10, padding:'12px 14px', marginBottom:14 },
+  trendBannerText: { fontSize:12.5, color:'#C7CAD1', lineHeight:1.5 },
+  fab:             { position:'fixed', bottom:28, right:24, width:54, height:54, borderRadius:'50%', background:'#E8472B', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 4px 16px rgba(232,71,43,0.4)' },
+  modalOverlay:    { position:'fixed', inset:0, background:'rgba(10,11,13,0.7)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:50 },
+  modal:           { background:'#1A1C20', borderTop:'1px solid #2C3036', borderRadius:'18px 18px 0 0', width:'100%', maxWidth:480, padding:'18px 20px 28px', maxHeight:'88vh', overflowY:'auto' },
+  modalHeader:     { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 },
+  modalTitle:      { fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:1, margin:0 },
+  typeToggleRow:   { display:'flex', gap:8, marginBottom:16 },
+  typeToggleBtn:   { flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#14161A', border:'1px solid #2C3036', color:'#8A9099', fontWeight:600, fontSize:13, padding:'10px 0', borderRadius:9, cursor:'pointer' },
+  typeToggleBtnActive: { background:'rgba(232,71,43,0.14)', border:'1px solid #E8472B', color:'#EDEAE2' },
+  iconBtn:         { background:'none', border:'none', cursor:'pointer', padding:4 },
+  form:            { display:'flex', flexDirection:'column', gap:14 },
+  formRow:         { display:'flex', gap:10 },
+  label:           { display:'flex', flexDirection:'column', gap:6, fontFamily:"'JetBrains Mono',monospace", fontSize:10.5, letterSpacing:0.6, textTransform:'uppercase', color:'#5B6470' },
+  input:           { background:'#14161A', border:'1px solid #2C3036', borderRadius:8, padding:'10px 12px', color:'#EDEAE2', fontSize:14, fontFamily:"'Inter',sans-serif", outline:'none', width:'100%' },
+  submitBtn:       { background:'#E8472B', color:'#14161A', border:'none', fontWeight:700, fontSize:14.5, padding:'13px', borderRadius:10, cursor:'pointer', marginTop:6 },
+  toast:           { position:'fixed', bottom:96, left:'50%', transform:'translateX(-50%)', background:'#1D2024', border:'1px solid #2C3036', color:'#EDEAE2', padding:'10px 18px', borderRadius:30, fontSize:13, fontWeight:500, display:'flex', alignItems:'center', boxShadow:'0 6px 20px rgba(0,0,0,0.4)', zIndex:60, whiteSpace:'nowrap' },
 };
+
+// ─── Mount ────────────────────────────────────────────────────────────────────
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(IronLog));
+</script>
+</body>
+</html>
