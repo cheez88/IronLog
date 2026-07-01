@@ -185,7 +185,7 @@ function IronLog() {
 
   const emptyForm = {
     type: 'strength', exercise: '', weight: '', reps: '', sets: '',
-    distance: '', durationMin: '', durationSec: '', route: '',
+    distance: '', durationMin: '', route: '',
     date: todayISO(), notes: '',
   };
   const [form, setForm] = useState(emptyForm);
@@ -261,12 +261,12 @@ function IronLog() {
   function handleSubmit(e) {
     e.preventDefault();
     if (form.type === 'run') {
-      if (!form.distance || (!form.durationMin && !form.durationSec)) return;
+      if (!form.distance || !form.durationMin) return;
     } else {
       if (!form.exercise.trim() || !form.weight) return;
     }
     const durationSeconds = form.type === 'run'
-      ? parseInt(form.durationMin||'0',10)*60 + parseInt(form.durationSec||'0',10)
+      ? parseInt(form.durationMin||'0',10)*60
       : null;
     const route = form.route.trim();
     const combinedNotes = form.type === 'run'
@@ -500,12 +500,6 @@ function IronLog() {
                     Minutes
                     <input style={S.input} type="number" inputMode="numeric" min="0"
                       value={form.durationMin} onChange={e => setForm(f => ({...f, durationMin:e.target.value}))}
-                      placeholder="0"/>
-                  </label>
-                  <label style={{...S.label, flex:1}}>
-                    Seconds
-                    <input style={S.input} type="number" inputMode="numeric" min="0" max="59"
-                      value={form.durationSec} onChange={e => setForm(f => ({...f, durationSec:e.target.value}))}
                       placeholder="0"/>
                   </label>
                 </div>
