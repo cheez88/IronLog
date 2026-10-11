@@ -649,6 +649,72 @@ function fingerprint(w) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
+// The barbell from the app icon, drawn from the same geometry so the two always match.
+function AppMark({
+  width = 46
+}) {
+  return /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 1205.0 720.0",
+    width: width,
+    height: width * 0.5975,
+    role: "img",
+    "aria-label": "IronLog",
+    style: {
+      display: 'block',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "12.5",
+    y: "312.0",
+    width: "1180.0",
+    height: "96.0",
+    rx: "48.0",
+    fill: "#6E7680"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "272.5",
+    y: "240.0",
+    width: "60.0",
+    height: "240.0",
+    rx: "14.0",
+    fill: "#6E7680"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "872.5",
+    y: "240.0",
+    width: "60.0",
+    height: "240.0",
+    rx: "14.0",
+    fill: "#6E7680"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "147.5",
+    y: "0.0",
+    width: "150.0",
+    height: "720.0",
+    rx: "26.0",
+    fill: "#E8472B"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "907.5",
+    y: "0.0",
+    width: "150.0",
+    height: "720.0",
+    rx: "26.0",
+    fill: "#E8472B"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "0.0",
+    y: "110.0",
+    width: "115.0",
+    height: "500.0",
+    rx: "26.0",
+    fill: "#B2341F"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "1090.0",
+    y: "110.0",
+    width: "115.0",
+    height: "500.0",
+    rx: "26.0",
+    fill: "#B2341F"
+  }));
+}
+
 // ─── PWA helpers ──────────────────────────────────────────────────────────────
 const isStandalone = () => window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
@@ -1284,15 +1350,9 @@ function IronLog() {
     style: S.header
   }, /*#__PURE__*/React.createElement("div", {
     style: S.headerLeft
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.barIcon
-  }, /*#__PURE__*/React.createElement("div", {
-    style: S.plate
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.bar
-  }), /*#__PURE__*/React.createElement("div", {
-    style: S.plate
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+  }, /*#__PURE__*/React.createElement(AppMark, {
+    width: 46
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
     style: S.title
   }, "IRONLOG"), /*#__PURE__*/React.createElement("p", {
     style: S.subtitle
@@ -3751,7 +3811,7 @@ const S = {
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12
+    gap: 13
   },
   barIcon: {
     display: 'flex',
