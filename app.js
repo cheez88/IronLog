@@ -2989,8 +2989,9 @@ function RecordsView({
     style: S.prList
   }, rec.events.slice(0, 6).map(e => {
     const isPace = e.label === 'Fastest pace';
-    const fmt = v => isPace ? formatPace(v, distanceUnit) : e.type === 'run' ? `${round1(v)}${distanceUnit}` : `${v}${unit}`;
-    const diff = isPace ? `−${formatDuration(e.from - e.to)}` : `+${round1(e.to - e.from)}`;
+    const round2 = n => Math.round(n * 100) / 100;
+    const fmt = v => isPace ? formatPace(v, distanceUnit) : e.type === 'run' ? `${round2(v)}${distanceUnit}` : `${v}${unit}`;
+    const diff = isPace ? `−${formatDuration(e.from - e.to)}` : e.type === 'run' ? `+${round2(e.to - e.from)}` : `+${round1(e.to - e.from)}`;
     return /*#__PURE__*/React.createElement("button", {
       key: e.id,
       style: S.prRow,
@@ -3117,7 +3118,7 @@ function RecordsView({
     style: S.recDate
   }, rec.run.longestTime ? formatDateShort(rec.run.longestTime.date) : ''))), /*#__PURE__*/React.createElement("div", {
     style: S.recFooter
-  }, rec.run.count, " ", rec.run.count === 1 ? 'run' : 'runs', " · ", round1(rec.run.total), distanceUnit, " total"))));
+  }, rec.run.count, " ", rec.run.count === 1 ? 'run' : 'runs', " · ", Math.round(rec.run.total * 100) / 100, distanceUnit, " total"))));
 }
 function EmptyState({
   onAdd
